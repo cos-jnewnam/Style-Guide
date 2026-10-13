@@ -1,18 +1,18 @@
 # Scottsdale Style Check
 
-A Chrome and Edge extension for content authors. Open a page, click the toolbar button, and it highlights anything that breaks the Scottsdale style guide, including inline CSS. Nothing leaves the browser.
+A Chrome and Edge extension for content authors. Open a page, click the toolbar button, and it highlights anything that breaks the [Scottsdale style guide](docs/AP%20Quick%20Tips.pdf), including inline CSS. Nothing leaves the browser.
 
 ## Install
 
 You need Chrome or Edge. Both load it the same way.
 
-1. Download or clone this repo.
+1. Download the latest `scottsdale-style-check-v*.zip` from [Releases](../../releases) and unzip it. Or clone this repo.
 2. Open `chrome://extensions` in Chrome, or `edge://extensions` in Edge.
 3. Turn on **Developer mode**.
-4. Choose **Load unpacked** and pick the `extension` folder.
+4. Choose **Load unpacked** and pick the `scottsdale-style-check` folder from the zip, or the `extension` folder if you cloned the repo.
 5. Pin the extension from the puzzle-piece menu so the button stays visible.
 
-To update, pull the latest code and click the reload arrow on the extension card.
+To update, unzip the new release over the old folder, or pull the latest code. Then click the reload arrow on the extension card.
 
 ## Use
 
@@ -99,8 +99,15 @@ extension/
   content.js        scanner, highlighter, results panel
   content.css       page highlights
   options.*         settings page
-tests/              rule and scanner tests
-tools/              icon script
+tests/              rule, scanner and browser tests
+tools/              icon script, live page scan
+docs/               the style guide PDF
 ```
 
 To add a rule, add an object to the `RULES` array in `rules.js`. A text rule gets the text of one node and returns match positions. A DOM rule gets the content area and returns elements. The settings page and the panel pick it up with no other changes.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the ground rules and how to cut a release.
+
+## License
+
+[MIT](LICENSE)
