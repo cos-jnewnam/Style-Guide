@@ -152,6 +152,22 @@ test('overlapping matches share one mark and list every issue', async () => {
   assert.ok(marks[0].getAttribute('title').split('\n').length >= 3, 'tooltip lists every message');
 });
 
+test('default skip selectors leave template parts alone', async () => {
+  const { doc } = await load({
+    main: '<div class="last-updated"><p>Last Updated: Oct 12, 2026</p></div><div class="ev-grid"><p>City of Scottsdale</p></div><p id="body">Oct 12, 2026</p>',
+  });
+  assert.strictEqual(doc.querySelectorAll('.last-updated mark, .ev-grid mark').length, 0);
+  assert.ok(doc.querySelector('#body mark'));
+});
+
+test('an ignored phrase matches a long heading in full', async () => {
+  const settings = require('../extension/rules.js').defaultSettings();
+  const heading = 'FY 2025/26 Consolidated Annual Performance and Evaluation Report (CAPER)';
+  settings.ignoredPhrases = [heading];
+  const { doc } = await load({ settings, main: `<h2>${heading}</h2>` });
+  assert.ok(!doc.querySelector('h2').classList.contains('ssc-el'));
+});
+
 test('a missing or invalid scope falls back to the whole page with a note', async () => {
   const settings = require('../extension/rules.js').defaultSettings();
   settings.scopeSelector = '#nope';

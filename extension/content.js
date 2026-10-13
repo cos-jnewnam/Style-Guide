@@ -199,6 +199,7 @@
         }
         for (const f of found) {
           if (ignored.has(String(f.snippet || '').trim().toLowerCase())) continue;
+          if (f.el && ignored.has(f.el.textContent.replace(/\s+/g, ' ').trim().toLowerCase())) continue;
           issues.push({
             id: issues.length,
             rule,

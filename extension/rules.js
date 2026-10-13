@@ -145,7 +145,18 @@
     'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
     'October', 'November', 'December', 'American', 'English', 'Spanish', 'Hispanic',
     'Black', 'Native', 'Veterans', 'Memorial', 'Independence', 'Thanksgiving', 'Christmas',
+    'Scottsdale Public Library', 'Appaloosa', 'Arabian', 'Mustang', 'Palomino', 'Pony Express',
+    'Knowasis', 'Culture Pass', 'Granite Reef Senior Center',
   ];
+
+  // Sitefinity template parts and widgets that authors do not edit in a content block.
+  const DEFAULT_IGNORE_SELECTORS = [
+    '#deptContact', '#accomStatement', '#holidaySchedule', '.last-updated', '.news-article__meta', '.pub-dt',
+    '.news-widget-instance',
+    '.cos-news-fourcol', '.news-onebyfive', '.ev-grid', '.ev-list', '.breadcrumb-section', '.banner-menu',
+    '.hero-banner', '.lib-search-header', '.header-bg-img', '.spacer-block', '.cog-cognito',
+    '.seed-lib__card', '.reportform-section', 'main > style',
+  ].join(', ');
 
   const DEFAULT_NUMBER_EXCEPTIONS = [
     'Room', 'Suite', 'Ste', 'Page', 'Pg', 'Section', 'Sec', 'Step', 'Phase', 'Level', 'Highway',
@@ -154,7 +165,7 @@
     'Building', 'Terminal', 'No', 'Number', 'Ch', 'Chapter', 'Vol', 'Volume', 'Line', 'Track',
     'Channel', 'Zone', 'Class', 'Form', 'Tier', 'Bay', 'Apt', 'Apartment', 'Hole', 'Lot',
     'Dock', 'Court', 'Platform', 'Option', 'Plan', 'Area', 'Stage', 'Type', 'Group', 'Team',
-    'Day', 'Week', 'Q', 'Quarter', 'Version', 'Ver', 'V', 'Rev', 'Series',
+    'Day', 'Week', 'Q', 'Quarter', 'Version', 'Ver', 'V', 'Rev', 'Series', 'Year', 'Age', 'Ages',
   ];
 
   // ---------- rules ----------
@@ -249,15 +260,21 @@
       kind: 'text',
       check(text, ctx) {
         const re = new RegExp(String.raw`\b(${MONTH}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+)(\d{4})\b`, 'g');
+        const range = String.raw`\s*(?:-|\u2013|\u2014|to|through|until)\s*`;
+        const yearBefore = new RegExp(String.raw`\b(\d{4}),?${range}$`);
+        const yearAfter = new RegExp(String.raw`^,?${range}${MONTH}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+(\d{4})\b`);
         const out = [];
         for (const m of matches(re, text)) {
-          if (Number(m[2]) === ctx.year) {
-            out.push({
-              start: m.index + m[1].length,
-              end: m.index + m[0].length,
-              message: `Leave out the year for dates in the current year (${ctx.year}).`,
-            });
-          }
+          if (Number(m[2]) !== ctx.year) continue;
+          // A range that crosses into another year needs both years.
+          const b = text.slice(0, m.index).match(yearBefore);
+          const a = text.slice(m.index + m[0].length).match(yearAfter);
+          if ((b && Number(b[1]) !== ctx.year) || (a && Number(a[1]) !== ctx.year)) continue;
+          out.push({
+            start: m.index + m[1].length,
+            end: m.index + m[0].length,
+            message: `Leave out the year for dates in the current year (${ctx.year}).`,
+          });
         }
         return out;
       },
@@ -381,6 +398,8 @@
         const extra = ((ctx.settings && ctx.settings.numberExceptionWords) || []).map((w) => w.toLowerCase());
         const before = new Set([...BEFORE_WORDS, ...extra]);
         const out = [];
+        // A digit on its own, like a calendar badge or table cell, is data rather than prose.
+        if (/^\s*[1-9]\s*$/.test(text)) return out;
         for (const m of matches(/(?<![\w$#.,:\/+\u2013-])([1-9])(?![\w:\/%]|[.,]\d|-\d|\u2013\d)/, text)) {
           const start = m.index;
           const end = start + 1;
@@ -686,9 +705,16 @@
       check(ctx) {
         const st = ctx.settings;
         const known = new Set();
+        const phrases = [];
         for (const entry of [...(st.properNouns || []), ...(st.titles || [])]) {
-          for (const w of String(entry).split(/\s+/)) if (w) known.add(w.toLowerCase());
+          const e = String(entry).trim();
+          if (/\s/.test(e)) phrases.push(e);
+          else if (e) known.add(e.toLowerCase());
         }
+        // Multi-word names count only as a whole phrase, so "Culture Pass" does not excuse "Pass" elsewhere.
+        const phraseRe = phrases.length
+          ? new RegExp("(?<!\\w)(?:" + alternation(phrases) + ")(?:e?s|['\u2019]s)?(?!\\w)", 'gi')
+          : null;
         const out = [];
         for (const el of ctx.els('h1,h2,h3,h4,h5,h6')) {
           const text = el.textContent.replace(/\s+/g, ' ').trim();
@@ -703,7 +729,10 @@
             });
             continue;
           }
-          const rest = words.slice(1);
+          // Quoted titles of works keep their capitals.
+          let marked = text.replace(/[\u201c"][^\u201d"]+[\u201d"]/g, 'x');
+          if (phraseRe) marked = marked.replace(phraseRe, 'x');
+          const rest = marked.split(' ').filter(Boolean).slice(1);
           const caps = rest.filter((w) => {
             const bare = w.replace(/^[^A-Za-z]+|[^A-Za-z'\u2019-]+$/g, '');
             return /^[A-Z][a-z'\u2019-]*$/.test(bare) && !known.has(bare.toLowerCase());
@@ -783,7 +812,7 @@
           if (before.trim() === '') continue;
           if (/[.!?]["'\u201d\u2019)]*\s+$/.test(before)) continue;
           if (/[A-Z][a-z'\u2019.-]+,\s+(?:the\s+)?$/.test(before)) continue;
-          const next = text.slice(m.index + m[0].length).match(/^\s+([A-Za-z.'\u2019-]+)/);
+          const next = text.slice(m.index + m[0].length).match(/^(?:['\u2019]s)?\s+([A-Za-z.'\u2019-]+)/);
           if (next && /^[A-Z]/.test(next[1])) continue;
           out.push({
             start: m.index,
@@ -887,7 +916,7 @@
     return {
       rules,
       scopeSelector: 'main',
-      ignoreSelectors: '',
+      ignoreSelectors: DEFAULT_IGNORE_SELECTORS,
       ignoredPhrases: [],
       allowedDomains: ['ScottsdaleAZ.gov', 'ScottsdaleLibrary.org'],
       properNouns: DEFAULT_PROPER_NOUNS.slice(),
