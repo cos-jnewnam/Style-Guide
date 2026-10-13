@@ -6,7 +6,8 @@ const AMBER = '#b54708';
 const GREEN = '#067647';
 const DEFAULT_TITLE = 'Run Scottsdale style check (click again to clear)';
 
-chrome.action.onClicked.addListener(async (tab) => {
+// Named so the browser test can call it, since automation cannot click the toolbar.
+async function onAction(tab) {
   if (!tab || tab.id == null) return;
   const target = { tabId: tab.id };
   try {
@@ -35,7 +36,9 @@ chrome.action.onClicked.addListener(async (tab) => {
       chrome.action.setTitle({ tabId: tab.id, title: DEFAULT_TITLE }).catch(() => {});
     }, 4000);
   }
-});
+}
+
+chrome.action.onClicked.addListener(onAction);
 
 chrome.runtime.onMessage.addListener((msg, sender) => {
   if (!msg || typeof msg !== 'object') return;

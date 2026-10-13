@@ -4,9 +4,11 @@
   "private": true,
   "description": "Chrome and Edge extension that checks a page against the Scottsdale style guide.",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:browser": "node --test --test-concurrency=1 tests/browser/*.test.js"
   },
   "devDependencies": {
-    "jsdom": "^26.0.0"
+    "jsdom": "^26.0.0",
+    "playwright": "^1.64.0"
   }
 }

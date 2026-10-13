@@ -220,9 +220,9 @@
     const t = S.targets.get(el);
     if (!t) return;
     const sev = t.issues.some((i) => i.severity === 'error') ? 'error' : 'review';
+    if (t.kind === 'el' && !t.saved) t.saved = { title: el.getAttribute('title'), cls: el.getAttribute('class') };
     el.classList.remove('ssc-error', 'ssc-review');
     el.classList.add(t.kind === 'mark' ? 'ssc-hl' : 'ssc-el', 'ssc-' + sev);
-    if (t.kind === 'el' && !t.saved) t.saved = { title: el.getAttribute('title') };
     const msgs = Array.from(new Set(t.issues.map((i) => i.message)));
     el.setAttribute('title', msgs.join('\n'));
   }
@@ -295,8 +295,8 @@
       if (t.saved) {
         if (t.saved.title === null) el.removeAttribute('title');
         else el.setAttribute('title', t.saved.title);
+        if (t.saved.cls === null && !el.getAttribute('class')) el.removeAttribute('class');
       }
-      if (!el.getAttribute('class')) el.removeAttribute('class');
     }
   }
 
