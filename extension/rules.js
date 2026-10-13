@@ -267,19 +267,22 @@
       group: 'Dates',
       label: 'Time, day, date order',
       help: 'List the time first, then the day, then the date. This one is a pattern guess, so it is set to review.',
-      example: '11 a.m., Tuesday, Aug. 10',
+      example: '11 a.m. - 2 p.m., Tuesday, Aug. 10',
       defaultSeverity: 'review',
       kind: 'text',
       check(text) {
-        const re = new RegExp(
-          String.raw`\b${MONTH}\.?\s+\d{1,2}(?!\d)(?:st|nd|rd|th)?(?:,\s*\d{4})?(?:,\s*|\s+at\s+|\s+from\s+|\s+beginning at\s+|\s+starting at\s+|\s+)\d{1,2}(?::\d{2})?\s*(?:[AaPp]\.?[Mm]\b|noon|midnight)`,
+        const dateThenTime = new RegExp(
+          String.raw`\b${MONTH}\.?\s+\d{1,2}(?!\d)(?:st|nd|rd|th)?(?:,\s*\d{4})?(?:,\s*|\s+at\s+|\s+from\s+|\s+beginning at\s+|\s+starting at\s+|\s+)(?:\d{1,2}(?::\d{2})?\s*[AaPp]\.?[Mm]\b|noon\b|midnight\b)`,
           'g'
         );
-        return matches(re, text).map((m) => ({
-          start: m.index,
-          end: m.index + m[0].length,
-          message: 'Put the time first, then the day, then the date. Example: "11 a.m., Tuesday, Aug. 10".',
-        }));
+        const dateThenDay = new RegExp(
+          String.raw`\b${MONTH}\.?\s+\d{1,2}(?!\d)(?:st|nd|rd|th)?,?\s+(?:Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\b`,
+          'g'
+        );
+        const message = 'Put the time first, then the day, then the date, as in "11 a.m. - 2 p.m., Tuesday, Aug. 10."';
+        return [...matches(dateThenTime, text), ...matches(dateThenDay, text)]
+          .map((m) => ({ start: m.index, end: m.index + m[0].length, message }))
+          .sort((a, b) => a.start - b.start);
       },
     },
 
@@ -356,7 +359,7 @@
         return matches(re, text).map((m) => ({
           start: m.index,
           end: m.index + m[0].length,
-          message: 'Use a.m. or p.m. once at the end of the range. Example: "9-10 a.m."',
+          message: 'Don’t repeat a.m. or p.m. Use it once at the end of the range, as in "9-10 a.m."',
         }));
       },
     },
@@ -418,7 +421,7 @@
       group: 'Addresses',
       label: 'Abbreviate directions in addresses',
       help: 'Use N., S., E. and W. in street addresses.',
-      example: '7447 E. Indian School Rd., not 7447 East Indian School Rd.',
+      example: '7447 E. Indian School Road, not 7447 East Indian School Road',
       defaultSeverity: 'error',
       kind: 'text',
       check(text) {
@@ -434,7 +437,7 @@
           out.push({
             start: m.index + m[0].length - 1,
             end: m.index + m[0].length,
-            message: `Add a period: "${m[1]}."`,
+            message: `Add a period. Write "${m[1]}."`,
           });
         }
         return out;
@@ -471,7 +474,7 @@
         return matches(re, text).map((m) => ({
           start: m.index + m[0].length - m[1].length,
           end: m.index + m[0].length,
-          message: `Add a period: "${m[1]}."`,
+          message: `Add a period. Write "${m[1]}."`,
         }));
       },
     },
@@ -480,7 +483,7 @@
       group: 'Addresses',
       label: 'Spell out Road, Alley and Drive',
       help: 'Remember RAD. Road, Alley and Drive are written out in addresses.',
-      example: '7447 E. Indian School Road, not Rd.',
+      example: '7447 E. Indian School Road, not 7447 E. Indian School Rd.',
       defaultSeverity: 'error',
       kind: 'text',
       check(text) {
@@ -551,7 +554,7 @@
           out.push({
             start: m.index,
             end: m.index + s.length,
-            message: `Do not print a direct URL. Write: For more information, visit ${site} and search "insert term here."`,
+            message: `No direct URLs. Instead write "For more information, visit ${site} and search “insert term here.”"`,
           });
         }
         return out;
@@ -561,7 +564,7 @@
       id: 'web-domain-case',
       group: 'Website',
       label: 'Website name spelling',
-      help: 'Write site names and email domains exactly as listed in settings, such as ScottsdaleAZ.gov.',
+      help: 'ScottsdaleAZ.gov is the style for the website and email address. Other site names in settings are checked the same way.',
       example: 'ScottsdaleAZ.gov, not scottsdaleaz.gov',
       defaultSeverity: 'error',
       kind: 'text',
@@ -584,8 +587,8 @@
       id: 'phone-format',
       group: 'Phone numbers',
       label: 'Hyphens only in phone numbers',
-      help: 'No periods, spaces, slashes or parentheses.',
-      example: '480-312-2321, not (480) 312-2321',
+      help: 'Use hyphens only for phone numbers. No periods or parentheses. Spaces and slashes are flagged too.',
+      example: '480-312-2321, not (480) 312-2321 or 480.312.2321',
       defaultSeverity: 'error',
       kind: 'text',
       check(text) {
@@ -598,7 +601,7 @@
           out.push({
             start: m.index,
             end: m.index + m[0].length,
-            message: `Use hyphens only. Write "${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}".`,
+            message: `Use hyphens only for phone numbers. Write "${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}".`,
           });
         }
         return out;
@@ -626,7 +629,7 @@
       id: 'wording-double-space',
       group: 'Wording',
       label: 'One space after a period',
-      help: 'No double spaces after a period or other sentence end.',
+      help: 'No double spaces after a period. That was for the typewriter era, not computers.',
       example: 'One space. Not two.',
       defaultSeverity: 'error',
       kind: 'text',
@@ -634,7 +637,7 @@
         return matches(/[.!?]["'\u201d\u2019)\]]*(?: {2,}| \u00a0|\u00a0 |\u00a0{2,})(?=\S)/, text).map((m) => ({
           start: m.index,
           end: m.index + m[0].length,
-          message: 'Use one space after a period.',
+          message: 'No double spaces after a period. That was for the typewriter era, not computers.',
         }));
       },
     },
@@ -642,7 +645,7 @@
       id: 'wording-oxford-comma',
       group: 'Wording',
       label: 'No comma before "and" in a list',
-      help: 'Leave out the comma before "and" in a simple series. This is a pattern guess, so it is set to review.',
+      help: 'Don’t use a comma before "and" when listing multiple items in sentences. This is a pattern guess, so it is set to review.',
       example: 'parks, trails and pools',
       defaultSeverity: 'review',
       kind: 'text',
@@ -660,7 +663,7 @@
           out.push({
             start: m.index,
             end: m.index + m[0].length,
-            message: 'Leave out the comma before "and" in a simple list.',
+            message: 'Don’t use a comma before "and" when listing items.',
           });
         }
         return out;
@@ -692,7 +695,7 @@
             out.push({
               el,
               snippet: trunc(text, 60),
-              message: 'This heading is in all capital letters. Use sentence case: capitalize only the first word and proper nouns.',
+              message: 'This heading is in all capital letters. Only the first word and proper nouns are capitalized in headlines.',
             });
             continue;
           }
@@ -705,7 +708,7 @@
             out.push({
               el,
               snippet: trunc(text, 60),
-              message: 'Headlines use sentence case. Capitalize only the first word and proper nouns.',
+              message: 'Only the first word and proper nouns are capitalized in headlines.',
             });
           }
         }
@@ -731,7 +734,7 @@
           return {
             start: m.index,
             end: m.index + t.length,
-            message: `Capitalize the title before a name: "${cap}".`,
+            message: `Capitalize titles before a name. Write "${cap}".`,
           };
         });
       },
@@ -754,7 +757,7 @@
         return matches(re, text).map((m) => ({
           start: m.index + m[0].length - m[1].length,
           end: m.index + m[0].length,
-          message: `Lowercase a title that follows a name: "${m[1].toLowerCase()}".`,
+          message: `Lowercase a title that follows a name. Write "${m[1].toLowerCase()}".`,
         }));
       },
     },
@@ -781,7 +784,7 @@
           out.push({
             start: m.index,
             end: m.index + m[0].length,
-            message: `Lowercase a title when no name follows: "${m[1].toLowerCase()}".`,
+            message: `Lowercase a title used without a name. Write "${m[1].toLowerCase()}".`,
           });
         }
         return out;

@@ -89,6 +89,8 @@ npm test
 
 The tests cover each rule with passing and failing text, and run the scanner and panel in jsdom to check highlighting, cleanup and the settings. To rebuild the icons, run `python3 tools/make-icons.py`.
 
+`npm run test:browser` loads the unpacked extension in Playwright's Chromium and drives the panel, badge and settings page. Run `npx playwright install chromium` once first. Set `HEADED=1` to watch it.
+
 ```
 extension/
   manifest.json     Manifest V3
