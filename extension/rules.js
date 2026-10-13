@@ -279,8 +279,12 @@
           String.raw`\b${MONTH}\.?\s+\d{1,2}(?!\d)(?:st|nd|rd|th)?,?\s+(?:Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\b`,
           'g'
         );
+        const dayThenTime = new RegExp(
+          String.raw`\b(?:Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)days?,?\s+(?:at\s+|from\s+)?(?:\d{1,2}(?::\d{2})?\s*[AaPp]\.?[Mm]\b|noon\b|midnight\b)`,
+          'g'
+        );
         const message = 'Put the time first, then the day, then the date, as in "11 a.m. - 2 p.m., Tuesday, Aug. 10."';
-        return [...matches(dateThenTime, text), ...matches(dateThenDay, text)]
+        return [...matches(dateThenTime, text), ...matches(dateThenDay, text), ...matches(dayThenTime, text)]
           .map((m) => ({ start: m.index, end: m.index + m[0].length, message }))
           .sort((a, b) => a.start - b.start);
       },

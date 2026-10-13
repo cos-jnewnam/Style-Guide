@@ -16,7 +16,7 @@ const cases = [
   ['date-month-format', 'See you Sep. 4 and Oct 5 and Sept 6.', ['Sep.', 'Oct', 'Sept'], ['Sept. 4', 'Oct. 5', 'Jan. 1']],
   ['date-ordinal', 'Register by Aug. 10th.', ['10th'], ['Aug. 10', 'the 10th floor']],
   ['date-year', 'Posted Oct. 12, 2026 and Oct. 5, 2027.', ['2026'], ['Oct. 5, 2027', 'Oct. 12']],
-  ['date-order', 'Meet Aug. 10 at 9 a.m. or Aug. 11, Wednesday or Aug. 12 at noon.', ['Aug. 10 at 9 a.m', 'Aug. 11, Wednesday', 'Aug. 12 at noon'], ['9 a.m., Tuesday, Aug. 10', 'Tuesday, Aug. 10', 'Aug. 10 with lunch being served at noon']],
+  ['date-order', 'Meet Aug. 10 at 9 a.m. or Aug. 11, Wednesday or Aug. 12 at noon or Tuesday at 11 a.m.', ['Aug. 10 at 9 a.m', 'Aug. 11, Wednesday', 'Aug. 12 at noon', 'Tuesday at 11 a.m'], ['9 a.m., Tuesday, Aug. 10', 'Tuesday, Aug. 10', 'Aug. 10 with lunch being served at noon']],
   ['time-format', 'Open 9 AM to 5 pm, or 7:30 P.M.', ['9 AM', '5 pm', '7:30 P.M.'], ['9 a.m. to 5 p.m.']],
   ['time-colon-zero', 'Doors open at 9:00 a.m.', ['9:00'], ['9 a.m.', '9:30 a.m.']],
   ['time-noon-midnight', 'Lunch at 12 p.m., or 12 noon, or 12:00 a.m.', ['12 p.m.', '12 noon', '12:00 a.m.'], ['noon', '12:30 p.m.', 'midnight']],
