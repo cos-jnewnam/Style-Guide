@@ -39,15 +39,15 @@ Every rule can be set to Error, Review or Off in the settings page (right-click 
 
 | Group | Rules |
 | --- | --- |
-| Dates | Abbreviate Jan., Feb., Aug., Sept., Oct., Nov., Dec. before a day. Spell out March through July. Month abbreviation format. No ordinals. Leave out the current year. Time, day, date order. |
+| Dates | Abbreviate Jan., Feb., Aug., Sept., Oct., Nov., Dec. before a day. Spell out March through July. Month abbreviation format. No ordinals. Leave out the current year in a sentence (a standalone date like "Release Date: Oct. 12, 2026" can keep it). Time, day, date order. |
 | Times | Lowercase a.m. and p.m. with periods. No :00. Noon and midnight. No repeated a.m. or p.m. in a range. |
-| Numbers | Spell out one through nine. Use numerals for 10 and up. |
+| Numbers | Spell out one through nine. A digit after its spelled-out word, as in five (5), and digits with a unit of time, as in 6 hours, are fine. Use numerals for 10 and up. |
 | Addresses | N., S., E., W. Ave., Blvd., St. with periods. Road, Alley and Drive spelled out. |
 | Website | No https:// or www. No direct URLs. Site names spelled exactly, such as ScottsdaleAZ.gov. |
 | Phone numbers | Hyphens only. |
 | Wording | Avoid "City of Scottsdale". One space after a period. No comma before "and" in a list. |
-| Headlines and titles | Sentence case headings. Capitalize a title before a name. Lowercase a title after a name or with no name. |
-| Inline CSS | `style=""` attributes. `<style>` blocks. Linked stylesheets inside the content. Old `<font>`, `<center>`, `align` and `bgcolor` markup. |
+| Headlines and titles | Sentence case headings. Page titles (`h1`) and card titles that link to another page are skipped. Capitalize a title before a name. Lowercase a title after a name or with no name. |
+| Inline CSS | Off by default. Turn them on in settings to flag `style=""` attributes, `<style>` blocks, linked stylesheets inside the content and old `<font>`, `<center>`, `align` and `bgcolor` markup. |
 
 ## Settings
 

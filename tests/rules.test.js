@@ -15,13 +15,13 @@ const cases = [
   ['date-month-spell', 'Join us Mar. 5 or May. 9.', ['Mar.', 'May.'], ['March 5', 'May 9']],
   ['date-month-format', 'See you Sep. 4 and Oct 5 and Sept 6.', ['Sep.', 'Oct', 'Sept'], ['Sept. 4', 'Oct. 5', 'Jan. 1']],
   ['date-ordinal', 'Register by Aug. 10th.', ['10th'], ['Aug. 10', 'the 10th floor']],
-  ['date-year', 'Posted Oct. 12, 2026 and Oct. 5, 2027.', ['2026'], ['Oct. 5, 2027', 'Oct. 12', 'July 1, 2025 through June 30, 2026', 'July 1, 2026, through June 30, 2027', 'Dec. 1, 2026 - Jan. 5, 2027']],
+  ['date-year', 'Posted Oct. 12, 2026 and Oct. 5, 2027. On Oct. 17, 2026, there will be a festival.', ['2026', '2026'], ['Oct. 5, 2027', 'Oct. 12', 'July 1, 2025 through June 30, 2026', 'July 1, 2026, through June 30, 2027', 'Dec. 1, 2026 - Jan. 5, 2027', 'Release Date: Oct 12, 2026', 'Labor Day - Monday, Sept. 7, 2026', 'Wed, Nov 11, 2026', 'On Oct. 17, 2025, the mayor was elected.']],
   ['date-order', 'Meet Aug. 10 at 9 a.m. or Aug. 11, Wednesday or Aug. 12 at noon or Tuesday at 11 a.m.', ['Aug. 10 at 9 a.m', 'Aug. 11, Wednesday', 'Aug. 12 at noon', 'Tuesday at 11 a.m'], ['9 a.m., Tuesday, Aug. 10', 'Tuesday, Aug. 10', 'Aug. 10 with lunch being served at noon']],
   ['time-format', 'Open 9 AM to 5 pm, or 7:30 P.M.', ['9 AM', '5 pm', '7:30 P.M.'], ['9 a.m. to 5 p.m.']],
   ['time-colon-zero', 'Doors open at 9:00 a.m.', ['9:00'], ['9 a.m.', '9:30 a.m.']],
   ['time-noon-midnight', 'Lunch at 12 p.m., or 12 noon, or 12:00 a.m.', ['12 p.m.', '12 noon', '12:00 a.m.'], ['noon', '12:30 p.m.', 'midnight']],
   ['time-repeat', 'Open 9 a.m. - 10 a.m. daily.', ['9 a.m. - 10 a.m.'], ['11 a.m. - 2 p.m.', '9-10 a.m.']],
-  ['num-spell-small', 'We have 5 cats.', ['5'], ['Aug. 5', '5 a.m.', 'Room 5', '3.5 million', '5 acres', '10 cats', '5 to 6 p.m.', 'Prop 4', 'Step 3', '5:30', '25 pets', '7', 'Year 3 review', 'ages 5 and up']],
+  ['num-spell-small', 'We have 5 cats.', ['5'], ['Aug. 5', '5 a.m.', 'Room 5', '3.5 million', '5 acres', '10 cats', '5 to 6 p.m.', 'Prop 4', 'Step 3', '5:30', '25 pets', '7', 'Year 3 review', 'ages 5 and up', 'four (4) spots', 'Open 7 days a week', 'takes 6 hours', 'wait 3 minutes', '2 months']],
   ['num-use-numerals', 'We need twelve people and twenty-five chairs.', ['twelve', 'twenty-five'], ['Twelve people came.', 'We need nine people.']],
   ['addr-direction', 'Visit 7447 East Indian School Road or 123 N Main St.', ['East', 'N'], ['7447 E. Indian School Road']],
   ['addr-street-type-abbrev', 'It is at 3939 N. Drinkwater Boulevard.', ['Boulevard'], ['3939 N. Drinkwater Blvd.', 'a street fair']],
@@ -69,15 +69,26 @@ test('head-sentence-case uses whole proper-noun phrases and skips quoted titles'
     '“Hands-On History” Book Signing': true,
     'Water Conservation Program Overview': true,
   };
-  const doc = new JSDOM(Object.keys(headings).map((h) => `<h2>${h}</h2>`).join('')).window.document;
+  const skipped = [
+    '<h1>Holiday Collection Schedule Page</h1>',
+    '<div class="card"><h3>Pony Express Hours Of Operation</h3></div>',
+    '<h3><a href="/x">Library Card Design Contest</a></h3>',
+    '<a href="/x"><h3>Renew Card In Person</h3></a>',
+  ];
+  const doc = new JSDOM(Object.keys(headings).map((h) => `<h2>${h}</h2>`).join('') + skipped.join('')).window.document;
   const found = SSC.RULES_BY_ID['head-sentence-case']
     .check({ settings, els: (s) => [...doc.querySelectorAll(s)] })
     .map((f) => f.el.textContent);
   for (const [h, flagged] of Object.entries(headings)) assert.strictEqual(found.includes(h), flagged, h);
+  assert.strictEqual(found.length, Object.values(headings).filter(Boolean).length, 'page titles and card titles are skipped');
 });
 
 test('date-year follows the year passed in', () => {
-  assert.deepStrictEqual(hits('date-year', 'Oct. 5, 2027', { year: 2027 }), ['2027']);
+  assert.deepStrictEqual(hits('date-year', 'We met Oct. 5, 2027 at noon.', { year: 2027 }), ['2027']);
+});
+
+test('num-spell-small still flags a digit that does not match the word before it', () => {
+  assert.deepStrictEqual(hits('num-spell-small', 'check out up to 3 seed packets, or five (4) passes'), ['3', '4']);
 });
 
 test('web-domain-case honors a custom domain list', () => {
@@ -102,7 +113,7 @@ test('every rule has the fields the options page needs', () => {
     ids.add(r.id);
     assert.ok(SSC.GROUPS.includes(r.group), r.id + ' has an unknown group');
     assert.ok(r.label && r.help && r.example, r.id + ' is missing text');
-    assert.ok(['error', 'review'].includes(r.defaultSeverity));
+    assert.ok(['error', 'review', 'off'].includes(r.defaultSeverity));
     assert.ok(['text', 'dom'].includes(r.kind));
   }
 });

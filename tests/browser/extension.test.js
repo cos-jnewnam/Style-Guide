@@ -18,7 +18,7 @@ const PAGE = `<!doctype html><html><head><title>Fixture</title>
 </style></head><body>
 <header><p>City of Scottsdale header with 5 things</p></header>
 <main>
-  <h1>Water Conservation Program Overview</h1>
+  <h2>Water Conservation Program Overview</h2>
   <p id="p1">Join us Aug. 10th at 9 AM, 7447 East Indian School Rd. Call (480) 312-2321.</p>
   <p id="p2" style="color:red" title="keep me">Visit https://www.scottsdaleaz.gov/trash for the City of Scottsdale schedule.</p>
   <div id="d3" class="" style="margin:0"><p class="keep me">We have 5 cats, 12 dogs and ten birds.</p></div>
@@ -105,7 +105,7 @@ async function waitForRows(page) {
 }
 
 test('scan highlights, panel, badge and a clean restore', async () => {
-  await setSettings(null);
+  await setSettings({ rules: { 'css-style-attr': 'error' } });
   const page = await openFixture();
   const before = await page.evaluate(() => document.documentElement.outerHTML);
 
@@ -119,7 +119,7 @@ test('scan highlights, panel, badge and a clean restore', async () => {
   }
   assert.strictEqual(await page.locator('header mark').count(), 0);
   assert.ok(await page.locator('#p2.ssc-el.ssc-error').count());
-  assert.ok(await page.locator('h1.ssc-el.ssc-review').count());
+  assert.ok(await page.locator('h2.ssc-el.ssc-review').count());
 
   // Page CSS must not reach into the panel.
   const box = await page.locator('#ssc-host .panel').boundingBox();

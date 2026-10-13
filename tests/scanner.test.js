@@ -9,7 +9,7 @@ const RULES_JS = ext('rules.js');
 const CONTENT_JS = ext('content.js');
 
 const MAIN_HTML = `
-  <h1>Water Conservation Program Overview</h1>
+  <h2>Water Conservation Program Overview</h2>
   <p id="p1">Join us Aug. 10th at 9 AM, 7447 East Indian School Rd. Call (480) 312-2321.</p>
   <p id="p2" style="color:red">Visit https://www.scottsdaleaz.gov/trash for the City of Scottsdale schedule.</p>
   <div id="d3"><style>p { margin: 0 }</style><p class="keep me">We have 5 cats, 12 dogs and ten birds.</p></div>
@@ -17,7 +17,13 @@ const MAIN_HTML = `
   <p id="clean">Visit ScottsdaleAZ.gov and search "trash." Open 9-10 a.m.</p>
 `;
 
+// Inline CSS rules are off by default. Most tests here turn them on.
+const CSS_ON = require('../extension/rules.js').defaultSettings();
+for (const id of ['css-style-attr', 'css-style-tag', 'css-link-stylesheet']) CSS_ON.rules[id] = 'error';
+CSS_ON.rules['css-legacy-markup'] = 'review';
+
 async function load(opts = {}) {
+  const settings = opts.settings === undefined ? CSS_ON : opts.settings;
   const html = `<!doctype html><html><head><title>Test page</title></head><body>
     <header><p id="outside">City of Scottsdale  header with 5 things</p></header>
     <main>${opts.main || MAIN_HTML}</main>
@@ -28,7 +34,7 @@ async function load(opts = {}) {
   const sent = [];
   w.chrome = {
     storage: {
-      sync: { get: async () => ({ settings: opts.settings }) },
+      sync: { get: async () => ({ settings }) },
       onChanged: { addListener() {} },
     },
     runtime: { sendMessage: (m) => sent.push(m) },
@@ -64,9 +70,15 @@ test('flags inline CSS, style tags, legacy markup and heading case', async () =>
   assert.ok(doc.getElementById('p2').classList.contains('ssc-el'), 'style attribute');
   assert.ok(doc.getElementById('d3').classList.contains('ssc-el'), 'element holding the <style> tag');
   assert.ok(doc.querySelector('font').classList.contains('ssc-el'), 'legacy font tag');
-  assert.ok(doc.querySelector('h1').classList.contains('ssc-el'), 'title case heading');
+  assert.ok(doc.querySelector('h2').classList.contains('ssc-el'), 'title case heading');
   assert.ok(doc.getElementById('p2').classList.contains('ssc-error'));
-  assert.ok(doc.querySelector('h1').classList.contains('ssc-review'));
+  assert.ok(doc.querySelector('h2').classList.contains('ssc-review'));
+});
+
+test('inline CSS rules are off by default', async () => {
+  const { doc } = await load({ settings: null });
+  assert.ok(!doc.getElementById('p2').classList.contains('ssc-el'));
+  assert.ok(!doc.querySelector('font').classList.contains('ssc-el'));
 });
 
 test('panel lists the issues and reports counts to the toolbar badge', async () => {

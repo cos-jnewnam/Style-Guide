@@ -116,7 +116,7 @@
   ]);
 
   const AFTER_OK = new RegExp(
-    '^\\s*(?:%|percent\\b|a\\.m\\.|p\\.m\\.|[ap]\\.?m\\b|\u00b0|degrees?\\b|cents?\\b|mph\\b|years?[- ]old\\b|yrs?\\b|acres?\\b|sq\\b|square\\b|(?:ft|feet|foot|inch|inches|lbs?|pounds?|oz|ounces?|miles?|mi|km|kg|cm|mm|gallons?|gal)\\b)',
+    '^\\s*(?:%|percent\\b|a\\.m\\.|p\\.m\\.|[ap]\\.?m\\b|\u00b0|degrees?\\b|cents?\\b|mph\\b|years?[- ]old\\b|yrs?\\b|acres?\\b|sq\\b|square\\b|(?:ft|feet|foot|inch|inches|lbs?|pounds?|oz|ounces?|miles?|mi|km|kg|cm|mm|gallons?|gal)\\b|(?:seconds?|secs?|minutes?|mins?|hours?|hrs?|days?|weeks?|wks?|months?|mos?|years?)\\b)',
     'i'
   );
   const RANGE_TIME = /^\s*(?:-|\u2013|to|and)\s*\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.)/i;
@@ -154,7 +154,7 @@
     '#deptContact', '#accomStatement', '#holidaySchedule', '.last-updated', '.news-article__meta', '.pub-dt',
     '.news-widget-instance',
     '.cos-news-fourcol', '.news-onebyfive', '.ev-grid', '.ev-list', '.breadcrumb-section', '.banner-menu',
-    '.hero-banner', '.lib-search-header', '.header-bg-img', '.spacer-block', '.cog-cognito',
+    '.prelative', '.lib-search-header', '.header-bg-img', '.spacer-block', '.cog-cognito',
     '.seed-lib__card', '.reportform-section', 'main > style',
   ].join(', ');
 
@@ -254,7 +254,7 @@
       id: 'date-year',
       group: 'Dates',
       label: 'Leave out the current year',
-      help: 'Do not add the year to a date that falls in the current year.',
+      help: 'Do not add the year to a date in a sentence when it falls in the current year. A date on its own line, such as "Release Date: Oct. 12, 2026", can keep the year.',
       example: 'Oct. 12, not Oct. 12, 2026 (when it is 2026)',
       defaultSeverity: 'review',
       kind: 'text',
@@ -263,9 +263,12 @@
         const range = String.raw`\s*(?:-|\u2013|\u2014|to|through|until)\s*`;
         const yearBefore = new RegExp(String.raw`\b(\d{4}),?${range}$`);
         const yearAfter = new RegExp(String.raw`^,?${range}${MONTH}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+(\d{4})\b`);
+        // Only a label like "Release Date:" or "Labor Day -" and a day name may come before a standalone date.
+        const labelOnly = /^(?:[\s\S]*(?::|\s[-\u2013\u2014]))?\s*(?:(?:Mon|Tues?|Wed(?:nes)?|Thu(?:rs)?|Fri|Sat(?:ur)?|Sun)(?:day)?\.?,?\s*)?$/;
         const out = [];
         for (const m of matches(re, text)) {
           if (Number(m[2]) !== ctx.year) continue;
+          if (labelOnly.test(text.slice(0, m.index)) && /^[\s.]*$/.test(text.slice(m.index + m[0].length))) continue;
           // A range that crosses into another year needs both years.
           const b = text.slice(0, m.index).match(yearBefore);
           const a = text.slice(m.index + m[0].length).match(yearAfter);
@@ -390,7 +393,7 @@
       id: 'num-spell-small',
       group: 'Numbers',
       label: 'Spell out one through nine',
-      help: 'Spell out single digits. Figures stay for times, dates, addresses, percentages, ages, money and measurements.',
+      help: 'Spell out single digits. A digit right after the spelled-out word, as in five (5), is fine. Figures stay for times and units of time, dates, addresses, percentages, ages, money and measurements.',
       example: 'five cats, not 5 cats',
       defaultSeverity: 'review',
       kind: 'text',
@@ -405,6 +408,8 @@
           const end = start + 1;
           const prev = text.slice(0, start).match(/([A-Za-z]+)\.?\s*$/);
           if (prev && before.has(prev[1].toLowerCase())) continue;
+          const spelled = text.slice(0, start).match(/\b([A-Za-z]+)\s*\($/);
+          if (spelled && spelled[1].toLowerCase() === NUMBER_WORDS[Number(m[1])]) continue;
           const after = text.slice(end);
           if (AFTER_OK.test(after) || RANGE_TIME.test(after)) continue;
           out.push({ start, end, message: `Spell out numbers one through nine. Write "${NUMBER_WORDS[Number(m[1])]}".` });
@@ -716,7 +721,9 @@
           ? new RegExp("(?<!\\w)(?:" + alternation(phrases) + ")(?:e?s|['\u2019]s)?(?!\\w)", 'gi')
           : null;
         const out = [];
-        for (const el of ctx.els('h1,h2,h3,h4,h5,h6')) {
+        for (const el of ctx.els('h2,h3,h4,h5,h6')) {
+          // Card titles mirror the title-case page they link to.
+          if (el.closest('.card, a[href]') || el.querySelector('a[href]')) continue;
           const text = el.textContent.replace(/\s+/g, ' ').trim();
           const words = text.split(' ').filter(Boolean);
           if (words.length < 3) continue;
@@ -831,7 +838,7 @@
       label: 'style="" attributes',
       help: 'Flags any element with an inline style attribute.',
       example: '<p style="color:red">',
-      defaultSeverity: 'error',
+      defaultSeverity: 'off',
       kind: 'dom',
       check(ctx) {
         const out = [];
@@ -853,7 +860,7 @@
       label: '<style> blocks',
       help: 'Flags <style> tags in the content area. The highlight goes on the element that holds the tag.',
       example: '<style>p { color: red }</style>',
-      defaultSeverity: 'error',
+      defaultSeverity: 'off',
       kind: 'dom',
       check(ctx) {
         return ctx.els('style').map((el) => ({
@@ -869,7 +876,7 @@
       label: 'Linked stylesheets in content',
       help: 'Flags <link rel="stylesheet"> tags in the content area.',
       example: '<link rel="stylesheet" href="...">',
-      defaultSeverity: 'error',
+      defaultSeverity: 'off',
       kind: 'dom',
       check(ctx) {
         return ctx.els('link[rel~="stylesheet" i]').map((el) => ({
@@ -885,7 +892,7 @@
       label: 'Old presentation markup',
       help: 'Flags <font>, <center>, <big>, <marquee> and the align, bgcolor, valign and face attributes.',
       example: '<font color="red">, <td align="center">',
-      defaultSeverity: 'review',
+      defaultSeverity: 'off',
       kind: 'dom',
       check(ctx) {
         const tags = new Set(['font', 'center', 'big', 'marquee', 'blink', 'basefont']);
