@@ -66,12 +66,17 @@ const RELEASE_LINES = [
   'City Attorney Luis Santaella explained that changing how long the city retains license plate reader records would require state approval.',
   'Holly Peralta, senior communications director, office: 480-312-2655, mobile: 480-586-0402',
   '“We’re excited to bring Scottsdale Fall Festival back,” said Parks, Recreation, Human Services and Preserve Senior Director Nick Molinari.',
+  'Scottsdale’s Short-Term Rental Team brings together representatives from the Police Department, City Attorney’s Office, City Manager’s Office, Code Enforcement, Planning, Solid Waste, Tax and Licensing, and Water.',
 ];
 
 test('title rules pass the news release lines as written', () => {
   for (const id of ['title-before-name', 'title-after-name', 'title-without-name']) {
     for (const line of RELEASE_LINES) assert.deepStrictEqual(hits(id, line), [], `${id}: ${line}`);
   }
+});
+
+test('title-after-name does not treat a department as a name', () => {
+  assert.deepStrictEqual(hits('title-after-name', 'Staff from the Fire Department, City Manager and Mayor attended.'), []);
 });
 
 test('title rules catch the same lines written wrong', () => {

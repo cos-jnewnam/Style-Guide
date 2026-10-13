@@ -793,14 +793,22 @@
         if (!titles.length) return [];
         // Up to two capitalized words before the title, as in "Jane Smith, Senior Communications Director".
         const re = new RegExp(
-          "\\b[A-Z][a-z'\u2019.-]+(?:\\s+[A-Z][a-z'\u2019.-]+){1,2},\\s+(?:the\\s+)?((?:[A-Z][a-z]+\\s+){0,2}(?:" + alternation(titles) + '))\\b',
+          "\\b([A-Z][a-z'\u2019.-]+(?:\\s+[A-Z][a-z'\u2019.-]+){1,2}),\\s+(?:the\\s+)?((?:[A-Z][a-z]+\\s+){0,2}(?:" + alternation(titles) + '))\\b',
           'g'
         );
-        return matches(re, text).map((m) => ({
-          start: m.index + m[0].length - m[1].length,
-          end: m.index + m[0].length,
-          message: `Lowercase a title that follows a name. Write "${m[1].toLowerCase()}".`,
-        }));
+        // A group, not a person, as in "Police Department, City Attorney's Office".
+        const groupWord = /\b(?:Department|Office|Division|Services|Team|Center|Library|Council|Commission|Board|Committee|Enforcement|Program|Planning|Waste|Licensing)$/;
+        const out = [];
+        for (const m of matches(re, text)) {
+          if (groupWord.test(m[1])) continue;
+          if (/^(?:['\u2019]s\b|\s+[A-Z])/.test(text.slice(m.index + m[0].length))) continue;
+          out.push({
+            start: m.index + m[0].length - m[2].length,
+            end: m.index + m[0].length,
+            message: `Lowercase a title that follows a name. Write "${m[2].toLowerCase()}".`,
+          });
+        }
+        return out;
       },
     },
     {
