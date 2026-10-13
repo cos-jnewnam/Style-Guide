@@ -595,23 +595,54 @@ ul{list-style:none;margin:0;padding:0}
     setStatus('Ignored until the next scan. To ignore it for good, add the text under "Ignored phrases" in settings.');
   }
 
+  function contextOf(issue) {
+    if (!issue.text) return `[${trunc(issue.snippet, 100)}]`;
+    const { text, start, end } = issue;
+    const R = 60;
+    let a = Math.max(0, start - R);
+    let b = Math.min(text.length, end + R);
+    if (a > 0) {
+      const sp = text.indexOf(' ', a);
+      if (sp !== -1 && sp < start) a = sp + 1;
+    }
+    if (b < text.length) {
+      const sp = text.lastIndexOf(' ', b);
+      if (sp > end) b = sp;
+    }
+    const s = text.slice(a, start) + '[' + text.slice(start, end) + ']' + text.slice(end, b);
+    return ((a > 0 ? '…' : '') + s + (b < text.length ? '…' : '')).replace(/\s+/g, ' ').trim();
+  }
+
+  function sectionOf(issue, headings) {
+    const el = issue.el;
+    const own = el.closest('h1,h2,h3,h4,h5,h6');
+    if (own || /^H[1-6]$/.test(el.tagName)) return 'In a heading';
+    let last = null;
+    for (const hd of headings) {
+      if (hd.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) last = hd;
+      else break;
+    }
+    const name = last && trunc(last.textContent, 100);
+    return name ? `Under "${name}"` : 'Near the top of the page';
+  }
+
   function reportText() {
     const c = counts();
+    const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6'));
     const lines = [
       'Scottsdale Style Check',
-      `Page: ${document.title || '(no title)'} (${location.href})`,
-      `Checked: ${S.scopeLabel}, ${new Date().toLocaleString()}`,
-      `Found: ${c.errors} ${c.errors === 1 ? 'error' : 'errors'}, ${c.review} to review`,
+      document.title || '(no title)',
+      location.href,
+      `Checked ${S.scopeLabel} on ${new Date().toLocaleString()}. Found ${c.errors} ${c.errors === 1 ? 'error' : 'errors'} and ${c.review} to review.`,
+      'Text in [brackets] is the part to fix.',
     ];
+    let n = 0;
     for (const sev of ['error', 'review']) {
       const items = S.issues.filter((i) => i.severity === sev);
       if (!items.length) continue;
       lines.push('', sev === 'error' ? 'ERRORS' : 'TO REVIEW');
-      for (const group of SSC.GROUPS) {
-        const g = items.filter((i) => i.rule.group === group);
-        if (!g.length) continue;
-        lines.push(`${group}`);
-        for (const i of g) lines.push(`- "${trunc(i.snippet, 80)}": ${i.message}`);
+      for (const i of items) {
+        lines.push('', `${++n}. ${i.rule.label}`, `   ${sectionOf(i, headings)}`, `   ${contextOf(i)}`, `   ${i.message}`);
       }
     }
     return lines.join('\n');

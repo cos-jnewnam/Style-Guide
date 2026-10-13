@@ -213,4 +213,17 @@ test('report text lists the findings', async () => {
   assert.match(copied, /Scottsdale Style Check/);
   assert.match(copied, /ERRORS/);
   assert.match(copied, /Drop the ordinal/);
+  assert.match(copied, /Join us Aug\. 10th at 9 AM, 7447 \[East\] Indian School Rd\./, 'shows the surrounding text with the match in brackets');
+  assert.match(copied, /Under "Water Conservation Program Overview"/, 'names the section');
+  assert.match(copied, /In a heading/);
+});
+
+test('report context trims long text to whole words', async () => {
+  const long = 'Residents can drop off items at many sites across the city all year long, including parks, trails, and pools. Staff empty the bins every week in every neighborhood.';
+  const { doc, w } = await load({ main: `<h2>Drop-off sites</h2><p>${long}</p>` });
+  let copied = '';
+  Object.defineProperty(w.navigator, 'clipboard', { value: { writeText: async (t) => (copied = t) }, configurable: true });
+  [...panel(doc).querySelectorAll('.foot .btn')].find((b) => b.textContent === 'Copy report').click();
+  await new Promise((r) => setTimeout(r, 20));
+  assert.match(copied, /^ {3}…[a-z].*parks, trails\[, and \]pools\. .*…$/m);
 });
