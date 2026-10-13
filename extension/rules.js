@@ -146,7 +146,8 @@
     'October', 'November', 'December', 'American', 'English', 'Spanish', 'Hispanic',
     'Black', 'Native', 'Veterans', 'Memorial', 'Independence', 'Thanksgiving', 'Christmas',
     'Scottsdale Public Library', 'Appaloosa', 'Arabian', 'Mustang', 'Palomino', 'Pony Express',
-    'Knowasis', 'Culture Pass', 'Granite Reef Senior Center',
+    'Knowasis', 'Culture Pass', 'Granite Reef Senior Center', 'Teen Advisory Board',
+    'Consolidated Annual Performance and Evaluation Report',
   ];
 
   // Sitefinity template parts and widgets that authors do not edit in a content block.
@@ -790,8 +791,9 @@
       check(text, ctx) {
         const titles = ctx.settings.titles || [];
         if (!titles.length) return [];
+        // Up to two capitalized words before the title, as in "Jane Smith, Senior Communications Director".
         const re = new RegExp(
-          "\\b[A-Z][a-z'\u2019.-]+(?:\\s+[A-Z][a-z'\u2019.-]+){1,2},\\s+(?:the\\s+)?(" + alternation(titles) + ')\\b',
+          "\\b[A-Z][a-z'\u2019.-]+(?:\\s+[A-Z][a-z'\u2019.-]+){1,2},\\s+(?:the\\s+)?((?:[A-Z][a-z]+\\s+){0,2}(?:" + alternation(titles) + '))\\b',
           'g'
         );
         return matches(re, text).map((m) => ({

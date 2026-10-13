@@ -57,6 +57,30 @@ test('title-without-name is skipped inside headings', () => {
   assert.deepStrictEqual(hits('title-without-name', 'Ask the Mayor', { inHeading: true }), []);
 });
 
+// Sentences from the Oct. 2026 license plate reader and fall festival news releases.
+const RELEASE_LINES = [
+  'Councilwoman Solange Whitehead made the motion, which Vice Mayor Maryann McAllen seconded.',
+  'Amendments offered by Councilman Adam Kwasman and Mayor Lisa Borowsky were accepted during the discussion.',
+  '“I’m grateful to the city council for its unanimous support and leadership,” said Police Chief Joe LeDuc.',
+  '“Our next step is to turn council’s direction into clear, enforceable requirements,” said City Manager Greg Caton.',
+  'City Attorney Luis Santaella explained that changing how long the city retains license plate reader records would require state approval.',
+  'Holly Peralta, senior communications director, office: 480-312-2655, mobile: 480-586-0402',
+  '“We’re excited to bring Scottsdale Fall Festival back,” said Parks, Recreation, Human Services and Preserve Senior Director Nick Molinari.',
+];
+
+test('title rules pass the news release lines as written', () => {
+  for (const id of ['title-before-name', 'title-after-name', 'title-without-name']) {
+    for (const line of RELEASE_LINES) assert.deepStrictEqual(hits(id, line), [], `${id}: ${line}`);
+  }
+});
+
+test('title rules catch the same lines written wrong', () => {
+  assert.deepStrictEqual(hits('title-before-name', 'The motion came from councilwoman Solange Whitehead.'), ['councilwoman']);
+  assert.deepStrictEqual(hits('title-after-name', 'Holly Peralta, Senior Communications Director, office'), ['Senior Communications Director']);
+  assert.deepStrictEqual(hits('title-after-name', 'Greg Caton, City Manager, said'), ['City Manager']);
+  assert.deepStrictEqual(hits('title-without-name', 'The plan came from the City Manager.'), ['City Manager']);
+});
+
 test('head-sentence-case uses whole proper-noun phrases and skips quoted titles', () => {
   const { JSDOM } = require('jsdom');
   const headings = {
@@ -68,6 +92,8 @@ test('head-sentence-case uses whole proper-noun phrases and skips quoted titles'
     '“Hands-On History” book signing': false,
     '“Hands-On History” Book Signing': true,
     'Water Conservation Program Overview': true,
+    'FY 2025/26 Consolidated Annual Performance and Evaluation Report (CAPER)': false,
+    'Teen Advisory Board (TAB)': false,
   };
   const skipped = [
     '<h1>Holiday Collection Schedule Page</h1>',
