@@ -1,0 +1,12 @@
+{
+  "name": "scottsdale-style-check",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome and Edge extension that checks a page against the Scottsdale style guide.",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0"
+  }
+}

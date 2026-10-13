@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scottsdale Style Check settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Scottsdale Style Check</h1>
+      <p>Choose how each rule behaves. Changes save on their own.</p>
+    </div>
+    <p id="saved" role="status" aria-live="polite"></p>
+  </header>
+
+  <main>
+    <section aria-labelledby="h-rules">
+      <h2 id="h-rules">Rules</h2>
+      <p class="lead">
+        <strong>Error</strong> is a solid red highlight. <strong>Review</strong> is a dotted amber highlight for
+        things that need a human look. <strong>Off</strong> skips the rule.
+      </p>
+      <div id="rules"></div>
+    </section>
+
+    <section aria-labelledby="h-scope">
+      <h2 id="h-scope">Where to check</h2>
+      <div class="field">
+        <label for="scopeSelector">Content area (CSS selector)</label>
+        <input id="scopeSelector" type="text" spellcheck="false" autocomplete="off">
+        <p class="hint">Only text inside this selector is checked. The default is <code>main</code>. If nothing on the page matches, the whole page is checked.</p>
+      </div>
+      <div class="field">
+        <label for="ignoreSelectors">Skip these areas (CSS selectors, separated by commas)</label>
+        <input id="ignoreSelectors" type="text" spellcheck="false" autocomplete="off" placeholder=".some-widget, #promo-banner">
+        <p class="hint">Anything inside these elements is not checked. Use it for widgets that add their own inline styles.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="h-lists">
+      <h2 id="h-lists">Word lists</h2>
+      <p class="lead">One item per line.</p>
+      <div class="field">
+        <label for="ignoredPhrases">Ignored phrases</label>
+        <textarea id="ignoredPhrases" rows="4" spellcheck="false"></textarea>
+        <p class="hint">Any flagged text that matches one of these exactly (ignoring capitalization) is skipped. Good for names and approved exceptions.</p>
+      </div>
+      <div class="field">
+        <label for="allowedDomains">Website names and their exact spelling</label>
+        <textarea id="allowedDomains" rows="3" spellcheck="false"></textarea>
+        <p class="hint">Typed in a different case, these get flagged. The first one is used in the "no direct URLs" message.</p>
+      </div>
+      <div class="field">
+        <label for="titles">Job titles</label>
+        <textarea id="titles" rows="6" spellcheck="false"></textarea>
+        <p class="hint">Used by the three title rules. Write each one the way it looks when capitalized.</p>
+      </div>
+      <div class="field">
+        <label for="properNouns">Proper nouns for headlines</label>
+        <textarea id="properNouns" rows="6" spellcheck="false"></textarea>
+        <p class="hint">Capitalized words in a heading that match these are not counted against sentence case. Add names, places and programs.</p>
+      </div>
+      <div class="field">
+        <label for="numberExceptionWords">Words that take a numeral</label>
+        <textarea id="numberExceptionWords" rows="6" spellcheck="false"></textarea>
+        <p class="hint">A single digit right after one of these words is left alone, as in "Room 5" or "Prop 4".</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="h-backup">
+      <h2 id="h-backup">Backup and reset</h2>
+      <p class="lead">Export your settings to share them with another department, or import a file someone sent you.</p>
+      <div class="buttons">
+        <button type="button" id="export">Export settings</button>
+        <button type="button" id="import">Import settings</button>
+        <button type="button" id="reset" class="danger">Reset everything to defaults</button>
+        <input type="file" id="file" accept="application/json,.json" hidden>
+      </div>
+    </section>
+  </main>
+
+  <script src="rules.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
