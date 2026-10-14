@@ -28,4 +28,4 @@ Both must pass. To check a change against live pages, run `node tools/scan-pages
 2. Commit, then tag with the same version, such as `git tag v0.2.0`.
 3. Push the tag with `git push origin v0.2.0`.
 
-GitHub Actions runs the tests and attaches `scottsdale-style-check-v0.2.0.zip` to a new release.
+GitHub Actions runs the tests and attaches `scottsdale-style-check.zip` to a new release. The download button on the install guide always points to the newest release.

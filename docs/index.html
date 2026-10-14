@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install Scottsdale Style Check</title>
+  <style>
+    :root { --navy: #17324d; --red: #b42318; --amber: #b54708; --line: #d5dae1; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #1b1f24; background: #f6f8fa; }
+    header { background: var(--navy); color: #fff; padding: 28px 20px; }
+    header h1 { margin: 0 0 4px; font-size: 28px; }
+    header p { margin: 0; max-width: 760px; }
+    main { max-width: 800px; margin: 0 auto; padding: 8px 20px 48px; }
+    section { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 24px 16px; margin-top: 20px; }
+    h2 { font-size: 22px; color: var(--navy); }
+    h3 { font-size: 18px; margin-bottom: 4px; }
+    ol > li, ul > li { margin: 6px 0; }
+    code, kbd { font-family: ui-monospace, Consolas, monospace; font-size: 15px; background: #eef2f6; border-radius: 4px; padding: 1px 6px; }
+    kbd { border: 1px solid #b8c0cc; }
+    .download { display: inline-block; margin: 8px 0 12px; padding: 12px 22px; background: var(--navy); color: #fff; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 18px; }
+    .download:hover, .download:focus-visible { background: #27496b; }
+    a:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+    .note { background: #fff4e5; border: 1px solid #f0c78a; border-radius: 8px; padding: 10px 14px; }
+    .err { border-bottom: 3px solid var(--red); background: rgba(220, 38, 38, .18); padding: 0 2px; }
+    .rev { border-bottom: 3px dotted var(--amber); background: rgba(245, 158, 11, .28); padding: 0 2px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; vertical-align: top; border-top: 1px solid var(--line); padding: 8px 6px; }
+    nav ul { padding-left: 20px; }
+    @media print {
+      body { background: #fff; font-size: 12pt; }
+      header { background: none; color: #000; padding: 0; }
+      section { border: 0; padding: 0; break-inside: avoid; }
+      .download { color: #000; background: none; border: 1px solid #000; }
+      nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Scottsdale Style Check</h1>
+    <p>A button for Chrome and Edge that checks a web page against the Scottsdale style guide and highlights anything to fix. It only looks at the page you are on, and nothing leaves your computer.</p>
+  </header>
+
+  <main>
+    <nav aria-label="On this page">
+      <ul>
+        <li><a href="#install">Install it (one time)</a></li>
+        <li><a href="#use">Check a page</a></li>
+        <li><a href="#update">Get a new version</a></li>
+        <li><a href="#help">If something goes wrong</a></li>
+      </ul>
+    </nav>
+
+    <section id="install" aria-labelledby="h-install">
+      <h2 id="h-install">Install it (one time)</h2>
+      <p>This takes about five minutes. You need Chrome or Microsoft Edge.</p>
+
+      <h3>1. Download</h3>
+      <a class="download" href="https://github.com/cos-jnewnam/Style-Guide/releases/latest/download/scottsdale-style-check.zip">Download Scottsdale Style Check</a>
+      <p>This always gets the newest version.</p>
+
+      <h3>2. Unzip it to a folder you will keep</h3>
+      <ol>
+        <li>Open your <strong>Downloads</strong> folder.</li>
+        <li>Right-click <code>scottsdale-style-check.zip</code> and choose <strong>Extract All</strong>.</li>
+        <li>Change the location to your <strong>Documents</strong> folder, then choose <strong>Extract</strong>.</li>
+      </ol>
+      <p>You now have a folder called <code>scottsdale-style-check</code> in Documents.</p>
+      <p class="note"><strong>Keep this folder.</strong> The browser runs the check from it. If you delete or move it, the button stops working.</p>
+
+      <h3>3. Turn on Developer mode</h3>
+      <table>
+        <thead><tr><th scope="col">Chrome</th><th scope="col">Edge</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Type <code>chrome://extensions</code> in the address bar and press <kbd>Enter</kbd>.</td>
+            <td>Type <code>edge://extensions</code> in the address bar and press <kbd>Enter</kbd>.</td>
+          </tr>
+          <tr>
+            <td>Turn on <strong>Developer mode</strong> in the top right corner.</td>
+            <td>Turn on <strong>Developer mode</strong> in the left sidebar. If you don't see the sidebar, make the window wider.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>If there is no Developer mode switch, or it is grayed out, stop here and contact the web team.</p>
+
+      <h3>4. Add the extension</h3>
+      <ol>
+        <li>Choose <strong>Load unpacked</strong>. It appears after Developer mode is on.</li>
+        <li>Go to <strong>Documents</strong>, select the <code>scottsdale-style-check</code> folder and choose <strong>Select Folder</strong>.</li>
+        <li><strong>Scottsdale Style Check</strong> now appears in your list of extensions.</li>
+      </ol>
+
+      <h3>5. Pin the button</h3>
+      <ol>
+        <li>Select the puzzle piece icon next to the address bar.</li>
+        <li>Select the pin next to <strong>Scottsdale Style Check</strong>.</li>
+      </ol>
+      <p>The dark blue button with a white check mark now stays next to the address bar.</p>
+    </section>
+
+    <section id="use" aria-labelledby="h-use">
+      <h2 id="h-use">Check a page</h2>
+      <ol>
+        <li>Open the page on ScottsdaleAZ.gov or ScottsdaleLibrary.org. Use the live page, a preview, or the page after you save it. The Sitefinity editing screen itself is not checked.</li>
+        <li>Select the check button, or press <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd>.</li>
+        <li>Problems are highlighted on the page and listed in a panel on the right.</li>
+      </ol>
+
+      <h3>Reading the highlights</h3>
+      <ul>
+        <li><span class="err">Solid red</span> is an <strong>error</strong>. It breaks the style guide. Fix it.</li>
+        <li><span class="rev">Dotted amber</span> is a <strong>review</strong>. It might be a problem. Read it and decide.</li>
+        <li>Hover over a highlight to see what is wrong.</li>
+      </ul>
+
+      <h3>Using the panel</h3>
+      <ul>
+        <li>Select an item in the list to jump to it on the page. <strong>Previous</strong> and <strong>Next</strong> step through them in order.</li>
+        <li>The red and amber buttons at the top show or hide errors and reviews.</li>
+        <li><strong>Ignore</strong> hides one item until the next check. Use it when a review item is fine as written.</li>
+        <li><strong>Copy report</strong> copies a list of every item, with the words around it and the part to fix in [brackets]. Paste it into an email or Teams to send to someone.</li>
+        <li><strong>Close</strong>, or selecting the button again, removes every highlight. The page goes back exactly as it was.</li>
+      </ul>
+
+      <p>The number on the button shows how many items were found. Red means there are errors, amber means only reviews, and a green OK means the page is clean.</p>
+      <p>Read the full <a href="AP%20Quick%20Tips.pdf">Scottsdale style guide (PDF)</a>.</p>
+    </section>
+
+    <section id="update" aria-labelledby="h-update">
+      <h2 id="h-update">Get a new version</h2>
+      <p>The web team will let you know when there is a new version.</p>
+      <ol>
+        <li><a href="https://github.com/cos-jnewnam/Style-Guide/releases/latest/download/scottsdale-style-check.zip">Download the newest version</a>.</li>
+        <li>Unzip it to <strong>Documents</strong> the same way as before. When Windows asks, choose <strong>Replace the files in the destination</strong>.</li>
+        <li>Open <code>chrome://extensions</code> or <code>edge://extensions</code>.</li>
+        <li>On the Scottsdale Style Check card, select the circular reload arrow.</li>
+      </ol>
+    </section>
+
+    <section id="help" aria-labelledby="h-help">
+      <h2 id="h-help">If something goes wrong</h2>
+      <table>
+        <thead><tr><th scope="col">What you see</th><th scope="col">What to do</th></tr></thead>
+        <tbody>
+          <tr><td>A red <strong>!</strong> on the button</td><td>That page can't be checked. Browser pages, settings pages and the extension store are blocked. Try a ScottsdaleAZ.gov page.</td></tr>
+          <tr><td>Nothing happens when you select the button</td><td>Refresh the page and try again. If it still does nothing, open the extensions page and select the reload arrow on the Scottsdale Style Check card.</td></tr>
+          <tr><td>The browser warns about developer mode extensions</td><td>That is expected for this tool. Choose to keep the extension.</td></tr>
+          <tr><td>The extension says the folder is missing</td><td>The folder was moved or deleted. Do the install steps again.</td></tr>
+          <tr><td>Something is flagged that is correct</td><td>Select <strong>Ignore</strong>, and let the web team know so the check can be improved.</td></tr>
+        </tbody>
+      </table>
+      <p>Questions? Email Jared Newnam at <a href="mailto:jnewnam@scottsdaleaz.gov">jnewnam@scottsdaleaz.gov</a>.</p>
+    </section>
+  </main>
+</body>
+</html>

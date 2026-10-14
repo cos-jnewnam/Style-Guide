@@ -4,9 +4,11 @@ A Chrome and Edge extension for content authors. Open a page, click the toolbar 
 
 ## Install
 
+**Content authors** should follow the [install guide](https://cos-jnewnam.github.io/Style-Guide/). The steps below are the short version.
+
 You need Chrome or Edge. Both load it the same way.
 
-1. Download the latest `scottsdale-style-check-v*.zip` from [Releases](../../releases) and unzip it. Or clone this repo.
+1. Download [scottsdale-style-check.zip](https://github.com/cos-jnewnam/Style-Guide/releases/latest/download/scottsdale-style-check.zip) and unzip it. Or clone this repo.
 2. Open `chrome://extensions` in Chrome, or `edge://extensions` in Edge.
 3. Turn on **Developer mode**.
 4. Choose **Load unpacked** and pick the `scottsdale-style-check` folder from the zip, or the `extension` folder if you cloned the repo.
