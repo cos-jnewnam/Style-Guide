@@ -105,7 +105,7 @@ async function waitForRows(page) {
 }
 
 test('scan highlights, panel, badge and a clean restore', async () => {
-  await setSettings({ rules: { 'css-style-attr': 'error' } });
+  await setSettings({ rules: { 'css-style-attr': 'error' }, allowTitleCaseTopHeadings: false });
   const page = await openFixture();
   const before = await page.evaluate(() => document.documentElement.outerHTML);
 
@@ -250,11 +250,11 @@ test('options page saves, exports and imports', async () => {
 });
 
 test('settings button opens a settings modal over the page', async () => {
-  await setSettings(null);
+  await setSettings({ allowTitleCaseTopHeadings: false });
   const page = await openFixture();
   await clickToolbar(page);
   await waitForRows(page);
-  assert.ok(await page.locator('h2.ssc-el').count(), 'title case h2 flagged by default');
+  assert.ok(await page.locator('h2.ssc-el').count(), 'title case h2 flagged when the toggle is off');
 
   await page.locator('#ssc-host .foot button', { hasText: 'Settings' }).click();
   const dialog = page.locator('#ssc-host dialog.settings');
