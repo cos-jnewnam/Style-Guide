@@ -123,8 +123,9 @@ test('head-sentence-case can allow Title Case in H1 to H3', () => {
   ).window.document;
   const run = (s) =>
     SSC.RULES_BY_ID['head-sentence-case'].check({ settings: s, els: (q) => [...doc.querySelectorAll(q)] }).map((f) => f.el.textContent);
-  assert.strictEqual(run(strictHeadings).length, 4);
-  assert.deepStrictEqual(run(settings), ['Drop Off Site Hours Today', 'WATER CONSERVATION PROGRAM']);
+  assert.strictEqual(run(settings).length, 4);
+  const on = Object.assign(SSC.defaultSettings(), { allowTitleCaseTopHeadings: true });
+  assert.deepStrictEqual(run(on), ['Drop Off Site Hours Today', 'WATER CONSERVATION PROGRAM']);
 });
 
 test('date-year follows the year passed in', () => {

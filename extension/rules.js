@@ -941,7 +941,7 @@
       properNouns: DEFAULT_PROPER_NOUNS.slice(),
       titles: DEFAULT_TITLES.slice(),
       numberExceptionWords: DEFAULT_NUMBER_EXCEPTIONS.slice(),
-      allowTitleCaseTopHeadings: true,
+      allowTitleCaseTopHeadings: false,
     };
   }
 
