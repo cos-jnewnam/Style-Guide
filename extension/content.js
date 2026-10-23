@@ -373,6 +373,10 @@ ul{list-style:none;margin:0;padding:0}
 .empty{padding:16px 4px;font-weight:600;color:#067647}
 .status{padding:6px 12px;font-size:12.5px;color:#3b4350;min-height:2em;border-top:1px solid #e1e5ea}
 .foot{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-top:1px solid #e1e5ea;background:#f6f8fa}
+.settings{width:min(900px,calc(100vw - 32px));height:min(900px,calc(100vh - 48px));max-width:none;max-height:none;padding:0;border:1px solid #b8c0cc;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden;background:#f4f6f8;color:#1b1f24;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.settings[open]{display:flex;flex-direction:column}
+.settings::backdrop{background:rgba(0,0,0,.45)}
+.settings iframe{flex:1;width:100%;border:0;display:block}
 `;
 
   function buildPanel() {
@@ -414,7 +418,7 @@ ul{list-style:none;margin:0;padding:0}
         h('button', { class: 'btn', type: 'button', onclick: () => step(1) }, 'Next'),
         h('button', { class: 'btn', type: 'button', onclick: () => run() }, 'Rescan'),
         h('button', { class: 'btn', type: 'button', onclick: copyReport }, 'Copy report'),
-        h('button', { class: 'btn', type: 'button', onclick: () => send({ type: 'open-options' }) }, 'Settings')
+        h('button', { class: 'btn', type: 'button', onclick: openSettings }, 'Settings')
       )
     );
     shadow.appendChild(ui.panel);
@@ -426,6 +430,44 @@ ul{list-style:none;margin:0;padding:0}
 
   function setStatus(msg) {
     if (S.ui.status) S.ui.status.textContent = msg || '';
+  }
+
+  function openSettings() {
+    if (!S.shadow || (S.ui.dialog && S.ui.dialog.open)) return;
+    const frame = h('iframe', {
+      title: 'Style check settings',
+      src: chrome.runtime.getURL('options.html?embedded=1'),
+    });
+    const dlg = h(
+      'dialog',
+      {
+        class: 'settings',
+        'aria-label': 'Style check settings',
+        onclose: () => {
+          dlg.remove();
+          S.ui.dialog = null;
+          S.ui.frame = null;
+        },
+        onclick: (e) => {
+          if (e.target === dlg) dlg.close();
+        },
+      },
+      h(
+        'div',
+        { class: 'head' },
+        h('h2', null, 'Settings'),
+        h('button', { class: 'btn', type: 'button', onclick: () => dlg.close() }, 'Done')
+      ),
+      frame
+    );
+    S.shadow.appendChild(dlg);
+    S.ui.dialog = dlg;
+    S.ui.frame = frame;
+    dlg.showModal();
+  }
+
+  function closeSettings() {
+    if (S.ui.dialog && S.ui.dialog.open) S.ui.dialog.close();
   }
 
   function visibleIssues() {
@@ -730,6 +772,11 @@ ul{list-style:none;margin:0;padding:0}
   } catch (e) {
     /* storage events are optional */
   }
+
+  // Escape inside the settings iframe never reaches the dialog, so the options page posts this instead.
+  window.addEventListener('message', (e) => {
+    if (e.data === 'ssc-close-settings' && S.ui.frame && e.source === S.ui.frame.contentWindow) closeSettings();
+  });
 
   globalThis.__ssc = {
     toggle,

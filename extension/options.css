@@ -82,6 +82,8 @@ input[type="text"], textarea {
 textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13.5px; }
 input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .hint { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; }
+.field.check label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.field.check input { width: 18px; height: 18px; margin: 0; }
 code { font-family: ui-monospace, Menlo, Consolas, monospace; }
 
 .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -101,3 +103,8 @@ button.danger { color: var(--red); border-color: var(--red); }
 @media (max-width: 640px) {
   .rule { flex-direction: column; }
 }
+
+.embedded .top { position: sticky; top: 0; z-index: 1; padding: 10px 20px; }
+.embedded .top h1 { display: none; }
+.embedded main { padding: 0 16px 24px; }
+.embedded section { margin-top: 16px; }

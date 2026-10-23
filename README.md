@@ -37,7 +37,7 @@ The toolbar badge shows how many items were found. It is red when there are erro
 
 ## What it checks
 
-Every rule can be set to Error, Review or Off in the settings page (right-click the extension, then Options, or use the Settings button in the panel).
+Every rule can be set to Error, Review or Off in settings. Use the Settings button in the panel to open them over the page, or right-click the extension and choose Options.
 
 | Group | Rules |
 | --- | --- |
@@ -56,6 +56,7 @@ Every rule can be set to Error, Review or Off in the settings page (right-click 
 - **Content area.** Only text inside this selector is checked. The default is `main`. If nothing matches, the whole page is checked and the panel says so.
 - **Skip these areas.** Selectors for widgets that add their own inline styles or text. The default list covers Sitefinity template parts on both sites, such as news and event listings, "Last Updated" dates, breadcrumbs and the holiday schedule.
 - **Ignored phrases.** Text that should never be flagged.
+- **Allow Title Case in H1, H2 and H3.** On by default, so those headings can use Title Case or sentence case. Turn it off to require sentence case in every heading. H4 to H6 always need sentence case, and all-caps headings are always flagged.
 - **Website names.** The exact spelling for each site name. The first one is used in the "no direct URLs" message.
 - **Job titles, proper nouns, number words.** Lists that cut down false positives for the title, headline and number rules. A name with more than one word, like Culture Pass, only counts when the whole name appears.
 - **Export and import.** Save your settings as a JSON file and share it with another department.

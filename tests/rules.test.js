@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const SSC = require('../extension/rules.js');
 
 const settings = SSC.defaultSettings();
+const strictHeadings = Object.assign(SSC.defaultSettings(), { allowTitleCaseTopHeadings: false });
 const ctx = (extra) => Object.assign({ settings, year: 2026, inHeading: false }, extra);
 
 function hits(id, text, extra) {
@@ -108,10 +109,22 @@ test('head-sentence-case uses whole proper-noun phrases and skips quoted titles'
   ];
   const doc = new JSDOM(Object.keys(headings).map((h) => `<h2>${h}</h2>`).join('') + skipped.join('')).window.document;
   const found = SSC.RULES_BY_ID['head-sentence-case']
-    .check({ settings, els: (s) => [...doc.querySelectorAll(s)] })
+    .check({ settings: strictHeadings, els: (s) => [...doc.querySelectorAll(s)] })
     .map((f) => f.el.textContent);
   for (const [h, flagged] of Object.entries(headings)) assert.strictEqual(found.includes(h), flagged, h);
   assert.strictEqual(found.length, Object.values(headings).filter(Boolean).length, 'page titles and card titles are skipped');
+});
+
+test('head-sentence-case can allow Title Case in H1 to H3', () => {
+  const { JSDOM } = require('jsdom');
+  const doc = new JSDOM(
+    '<h2>Water Conservation Program Overview</h2><h3>Peak Hours and Trail Info</h3>' +
+      '<h4>Drop Off Site Hours Today</h4><h2>WATER CONSERVATION PROGRAM</h2>'
+  ).window.document;
+  const run = (s) =>
+    SSC.RULES_BY_ID['head-sentence-case'].check({ settings: s, els: (q) => [...doc.querySelectorAll(q)] }).map((f) => f.el.textContent);
+  assert.strictEqual(run(strictHeadings).length, 4);
+  assert.deepStrictEqual(run(settings), ['Drop Off Site Hours Today', 'WATER CONSERVATION PROGRAM']);
 });
 
 test('date-year follows the year passed in', () => {

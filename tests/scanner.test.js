@@ -21,6 +21,7 @@ const MAIN_HTML = `
 const CSS_ON = require('../extension/rules.js').defaultSettings();
 for (const id of ['css-style-attr', 'css-style-tag', 'css-link-stylesheet']) CSS_ON.rules[id] = 'error';
 CSS_ON.rules['css-legacy-markup'] = 'review';
+CSS_ON.allowTitleCaseTopHeadings = false;
 
 async function load(opts = {}) {
   const settings = opts.settings === undefined ? CSS_ON : opts.settings;
@@ -176,6 +177,7 @@ test('an ignored phrase matches a long heading in full', async () => {
   const settings = require('../extension/rules.js').defaultSettings();
   const heading = 'FY 2025/26 Consolidated Annual Performance and Evaluation Report (CAPER)';
   settings.ignoredPhrases = [heading];
+  settings.allowTitleCaseTopHeadings = false;
   const { doc } = await load({ settings, main: `<h2>${heading}</h2>` });
   assert.ok(!doc.querySelector('h2').classList.contains('ssc-el'));
 });

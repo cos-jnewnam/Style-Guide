@@ -42,10 +42,6 @@ chrome.action.onClicked.addListener(onAction);
 
 chrome.runtime.onMessage.addListener((msg, sender) => {
   if (!msg || typeof msg !== 'object') return;
-  if (msg.type === 'open-options') {
-    chrome.runtime.openOptionsPage();
-    return;
-  }
   if (msg.type === 'badge' && sender.tab && sender.tab.id != null) {
     const tabId = sender.tab.id;
     const color = msg.state === 'error' ? RED : msg.state === 'review' ? AMBER : GREEN;
