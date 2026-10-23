@@ -114,6 +114,19 @@ test('head-sentence-case uses whole proper-noun phrases and skips quoted titles'
   assert.strictEqual(found.length, Object.values(headings).filter(Boolean).length, 'page titles and card titles are skipped');
 });
 
+test('head-sentence-case can allow Title Case in H1 to H3', () => {
+  const { JSDOM } = require('jsdom');
+  const doc = new JSDOM(
+    '<h2>Water Conservation Program Overview</h2><h3>Peak Hours and Trail Info</h3>' +
+      '<h4>Drop Off Site Hours Today</h4><h2>WATER CONSERVATION PROGRAM</h2>'
+  ).window.document;
+  const run = (s) =>
+    SSC.RULES_BY_ID['head-sentence-case'].check({ settings: s, els: (q) => [...doc.querySelectorAll(q)] }).map((f) => f.el.textContent);
+  assert.strictEqual(run(settings).length, 4);
+  const on = Object.assign(SSC.defaultSettings(), { allowTitleCaseTopHeadings: true });
+  assert.deepStrictEqual(run(on), ['Drop Off Site Hours Today', 'WATER CONSERVATION PROGRAM']);
+});
+
 test('date-year follows the year passed in', () => {
   assert.deepStrictEqual(hits('date-year', 'We met Oct. 5, 2027 at noon.', { year: 2027 }), ['2027']);
 });

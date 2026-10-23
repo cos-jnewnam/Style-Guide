@@ -249,16 +249,25 @@ test('options page saves, exports and imports', async () => {
   await page.close();
 });
 
-test('settings button in the panel opens the options page', async () => {
+test('settings button opens a settings modal over the page', async () => {
   await setSettings(null);
   const page = await openFixture();
   await clickToolbar(page);
   await waitForRows(page);
-  const [opts] = await Promise.all([
-    context.waitForEvent('page', (p) => p.url().startsWith(`chrome-extension://${extId}/options.html`)),
-    page.locator('#ssc-host button', { hasText: 'Settings' }).click(),
-  ]);
-  await opts.close();
+  assert.ok(await page.locator('h2.ssc-el').count(), 'title case h2 flagged by default');
+
+  await page.locator('#ssc-host .foot button', { hasText: 'Settings' }).click();
+  const dialog = page.locator('#ssc-host dialog.settings');
+  await dialog.waitFor();
+  const frame = page.frameLocator('#ssc-host dialog.settings iframe');
+  const toggle = frame.locator('#allowTitleCaseTopHeadings');
+  await toggle.check();
+  await frame.locator('#saved', { hasText: 'Saved' }).waitFor();
+  await page.waitForFunction(() => !document.querySelector('main h2.ssc-el'));
+
+  // Escape inside the iframe closes the modal.
+  await toggle.press('Escape');
+  await dialog.waitFor({ state: 'detached' });
   await clickToolbar(page);
   await page.close();
 });

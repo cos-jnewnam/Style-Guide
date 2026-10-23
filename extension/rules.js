@@ -722,6 +722,7 @@
           ? new RegExp("(?<!\\w)(?:" + alternation(phrases) + ")(?:e?s|['\u2019]s)?(?!\\w)", 'gi')
           : null;
         const out = [];
+        const topTitleCaseOk = !!st.allowTitleCaseTopHeadings;
         for (const el of ctx.els('h2,h3,h4,h5,h6')) {
           // Card titles mirror the title-case page they link to.
           if (el.closest('.card, a[href]') || el.querySelector('a[href]')) continue;
@@ -737,6 +738,7 @@
             });
             continue;
           }
+          if (topTitleCaseOk && /^H[1-3]$/.test(el.tagName)) continue;
           // Quoted titles of works keep their capitals.
           let marked = text.replace(/[\u201c"][^\u201d"]+[\u201d"]/g, 'x');
           if (phraseRe) marked = marked.replace(phraseRe, 'x');
@@ -939,6 +941,7 @@
       properNouns: DEFAULT_PROPER_NOUNS.slice(),
       titles: DEFAULT_TITLES.slice(),
       numberExceptionWords: DEFAULT_NUMBER_EXCEPTIONS.slice(),
+      allowTitleCaseTopHeadings: false,
     };
   }
 

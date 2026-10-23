@@ -5,6 +5,7 @@
 
   const TEXT_FIELDS = ['scopeSelector', 'ignoreSelectors'];
   const LIST_FIELDS = ['ignoredPhrases', 'allowedDomains', 'titles', 'properNouns', 'numberExceptionWords'];
+  const BOOL_FIELDS = ['allowTitleCaseTopHeadings'];
 
   let settings = SSC.defaultSettings();
   let saveTimer = 0;
@@ -84,6 +85,7 @@
     }
     for (const f of TEXT_FIELDS) $('#' + f).value = settings[f] || '';
     for (const f of LIST_FIELDS) $('#' + f).value = (settings[f] || []).join('\n');
+    for (const f of BOOL_FIELDS) $('#' + f).checked = !!settings[f];
   }
 
   function wireFields() {
@@ -99,6 +101,12 @@
           .split('\n')
           .map((s) => s.trim())
           .filter(Boolean);
+        save();
+      });
+    }
+    for (const f of BOOL_FIELDS) {
+      $('#' + f).addEventListener('change', (e) => {
+        settings[f] = e.target.checked;
         save();
       });
     }
@@ -147,6 +155,13 @@
   }
 
   async function init() {
+    // Shown inside the results panel's settings modal.
+    if (new URLSearchParams(location.search).has('embedded') && window.parent !== window) {
+      document.documentElement.classList.add('embedded');
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') window.parent.postMessage('ssc-close-settings', '*');
+      });
+    }
     buildRules();
     wireFields();
     wireButtons();
