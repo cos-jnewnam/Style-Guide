@@ -452,7 +452,7 @@ ul{list-style:none;margin:0;padding:0}
     ui.panel = h(
       'section',
       { class: 'panel', role: 'region', 'aria-label': 'Scottsdale style check results' },
-      h('div', { class: 'head' }, h('h2', null, 'Style check'), ui.minBtn, ui.closeBtn),
+      h('div', { class: 'head' }, h('h2', null, 'Scottsdale Style Guide'), ui.minBtn, ui.closeBtn),
       h('div', { class: 'chips' }, ui.errChip, ui.revChip),
       ui.notes,
       ui.scope,
