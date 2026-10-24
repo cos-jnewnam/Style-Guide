@@ -30,6 +30,7 @@ How to read it:
 - Select an item in the list to scroll to it. Previous and Next step through the page in order.
 - The red and amber buttons at the top of the panel show or hide each kind.
 - **Ignore** drops one item until the next scan.
+- The check never changes the page's HTML. Highlights are painted by the browser and outlines are drawn in the panel's own layer, so nothing can be saved into your content.
 - **Copy report** puts a plain-text list on your clipboard to send to an author.
 - Click the toolbar button again, or Close, to clear everything. The page goes back exactly as it was.
 
