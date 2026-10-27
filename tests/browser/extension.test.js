@@ -104,26 +104,49 @@ async function waitForRows(page) {
   return page.locator('#ssc-host .row');
 }
 
+// Text of every highlighted range, optionally only those inside a selector.
+function highlighted(page, sel) {
+  return page.evaluate(
+    (sel) =>
+      ['ssc-error', 'ssc-review']
+        .flatMap((n) => [...(CSS.highlights.get(n) || [])])
+        .filter((r) => !sel || r.startContainer.parentElement.closest(sel))
+        .map((r) => r.toString()),
+    sel
+  );
+}
+
 test('scan highlights, panel, badge and a clean restore', async () => {
   await setSettings({ rules: { 'css-style-attr': 'error' }, allowTitleCaseTopHeadings: false });
   const page = await openFixture();
   const before = await page.evaluate(() => document.documentElement.outerHTML);
+  const bodyBefore = await page.evaluate(() => document.body.outerHTML);
 
   await clickToolbar(page);
   const rows = await waitForRows(page);
   assert.ok((await rows.count()) >= 10, 'expected at least 10 rows');
 
-  const marks = await page.locator('main mark.ssc-hl').allTextContents();
+  const marks = await highlighted(page, 'main');
   for (const t of ['East', 'Rd.', '(480) 312-2321', 'City of Scottsdale', '5', 'ten', '480.312.2321']) {
-    assert.ok(marks.includes(t), `missing mark ${t}: ${JSON.stringify(marks)}`);
+    assert.ok(marks.includes(t), `missing highlight ${t}: ${JSON.stringify(marks)}`);
   }
-  assert.strictEqual(await page.locator('header mark').count(), 0);
-  assert.ok(await page.locator('#p2.ssc-el.ssc-error').count());
-  assert.ok(await page.locator('h2.ssc-el.ssc-review').count());
+  assert.strictEqual((await highlighted(page, 'header')).length, 0);
+  assert.ok(await page.locator('#ssc-host .box.err').count(), 'style attribute outline');
+  assert.ok(await page.locator('#ssc-host .box.rev').count(), 'heading outline');
+  assert.strictEqual(await page.evaluate(() => document.body.outerHTML), bodyBefore, 'page markup changed while active');
+
+  // Outlines sit on the element they flag.
+  const h2 = await page.locator('main h2').boundingBox();
+  const box = await page.locator('#ssc-host .box.rev').first().boundingBox();
+  assert.ok(Math.abs(box.x - h2.x) < 2 && Math.abs(box.y - h2.y) < 2, `box ${JSON.stringify(box)} vs h2 ${JSON.stringify(h2)}`);
+
+  // Hovering a highlight shows its message.
+  await page.locator('main h2').hover();
+  await page.locator('#ssc-host .tip:not([hidden])').waitFor();
 
   // Page CSS must not reach into the panel.
-  const box = await page.locator('#ssc-host .panel').boundingBox();
-  assert.ok(Math.abs(box.width - 380) < 2, 'panel width ' + box.width);
+  const panelBox = await page.locator('#ssc-host .panel').boundingBox();
+  assert.ok(Math.abs(panelBox.width - 380) < 2, 'panel width ' + panelBox.width);
   const chipColor = await page.locator('#ssc-host .chip.err').evaluate((el) => getComputedStyle(el).color);
   assert.strictEqual(chipColor, 'rgb(180, 35, 24)');
 
@@ -150,10 +173,10 @@ test('jump, step, filters, ignore and copy report', async () => {
   const farRow = rows.filter({ hasText: '480.312.2321' });
   await farRow.locator('.jump').click();
   await page.waitForFunction(() => {
-    const r = document.querySelector('#far mark').getBoundingClientRect();
+    const r = document.querySelector('#far').getBoundingClientRect();
     return r.top >= 0 && r.bottom <= innerHeight;
   });
-  assert.ok(await page.locator('#far mark.ssc-active').count());
+  assert.ok(await page.locator('#ssc-host .pulse').count());
   assert.match(await status.textContent(), /^Item \d+ of \d+$/);
 
   // Jumping to the item inside the closed <details> opens it.
@@ -168,16 +191,16 @@ test('jump, step, filters, ignore and copy report', async () => {
   // Filters
   const total = await rows.count();
   await page.locator('#ssc-host .chip.err').click();
-  assert.ok(await page.evaluate(() => document.documentElement.hasAttribute('data-ssc-hide-error')));
+  assert.strictEqual(await page.evaluate(() => CSS.highlights.get('ssc-error').size), 0);
   assert.strictEqual(await page.locator('#ssc-host .row.err').count(), 0);
   await page.locator('#ssc-host .chip.err').click();
   assert.strictEqual(await rows.count(), total);
 
   // Ignore
-  const marksBefore = await page.locator('mark.ssc-hl').count();
+  const marksBefore = (await highlighted(page)).length;
   await page.locator('#ssc-host .row', { hasText: '(480) 312-2321' }).locator('.ign').click();
   assert.strictEqual(await rows.count(), total - 1);
-  assert.strictEqual(await page.locator('mark.ssc-hl').count(), marksBefore - 1);
+  assert.strictEqual((await highlighted(page)).length, marksBefore - 1);
 
   // Copy report
   await page.locator('#ssc-host button', { hasText: 'Copy report' }).click();
@@ -189,7 +212,7 @@ test('jump, step, filters, ignore and copy report', async () => {
 
   await page.locator('#ssc-host button', { hasText: 'Close' }).click();
   await page.locator('#ssc-host').waitFor({ state: 'detached' });
-  assert.strictEqual(await page.locator('mark.ssc-hl, .ssc-el').count(), 0);
+  assert.strictEqual(await page.evaluate(() => CSS.highlights.size), 0);
   await page.close();
 });
 
@@ -199,7 +222,7 @@ test('scope fallback note and rescan on settings change', async () => {
   await clickToolbar(page);
   await waitForRows(page);
   assert.match(await page.locator('#ssc-host .note').textContent(), /Nothing on this page matched "#nope"/);
-  assert.ok(await page.locator('header mark').count(), 'whole page should be checked');
+  assert.ok((await highlighted(page, 'header')).length, 'whole page should be checked');
 
   assert.ok((await page.locator('#ssc-host .rname', { hasText: 'Hyphens only' }).count()) > 0);
   await setSettings({ scopeSelector: 'main', rules: { 'phone-format': 'off' } });
@@ -254,7 +277,7 @@ test('settings button opens a settings modal over the page', async () => {
   const page = await openFixture();
   await clickToolbar(page);
   await waitForRows(page);
-  assert.ok(await page.locator('h2.ssc-el').count(), 'title case h2 flagged when the toggle is off');
+  assert.ok(await page.locator('#ssc-host .box').count(), 'title case h2 flagged when the toggle is off');
 
   await page.locator('#ssc-host .foot button', { hasText: 'Settings' }).click();
   const dialog = page.locator('#ssc-host dialog.settings');
@@ -263,7 +286,7 @@ test('settings button opens a settings modal over the page', async () => {
   const toggle = frame.locator('#allowTitleCaseTopHeadings');
   await toggle.check();
   await frame.locator('#saved', { hasText: 'Saved' }).waitFor();
-  await page.waitForFunction(() => !document.querySelector('main h2.ssc-el'));
+  await page.waitForFunction(() => !document.getElementById('ssc-host').shadowRoot.querySelector('.box'));
 
   // Escape inside the iframe closes the modal.
   await toggle.press('Escape');

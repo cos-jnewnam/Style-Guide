@@ -21,15 +21,17 @@
     settings: null,
     scopeLabel: '',
     notes: [],
-    targets: new Map(), // element -> { kind: 'mark' | 'el', issues: [], saved }
     issues: [],
+    boxes: [], // { el, div } outlines for element issues
+    pulse: null, // { target, div }
+    hl: null, // { error, review } Highlight objects
+    stopTracking: null,
     host: null,
     shadow: null,
     ui: {},
     filters: { error: true, review: true },
     minimized: false,
     currentIssue: null,
-    activeEl: null,
     activeTimer: 0,
     rescanTimer: 0,
     runToken: 0,
@@ -160,6 +162,9 @@
           for (const f of found) {
             const snippet = text.slice(f.start, f.end);
             if (ignored.has(snippet.trim().toLowerCase())) continue;
+            const range = document.createRange();
+            range.setStart(node, f.start);
+            range.setEnd(node, f.end);
             issues.push({
               id: issues.length,
               rule,
@@ -170,6 +175,7 @@
               text,
               start: f.start,
               end: f.end,
+              range,
               el: null,
             });
           }
@@ -207,6 +213,7 @@
             message: f.message || rule.help,
             snippet: f.snippet || '',
             node: null,
+            range: null,
             el: f.el,
           });
         }
@@ -216,119 +223,148 @@
   }
 
   // ---------- highlighting ----------
+  // Never edits the page DOM: text uses CSS highlights, everything else is drawn in the shadow root.
 
-  function paint(el) {
-    const t = S.targets.get(el);
-    if (!t) return;
-    const sev = t.issues.some((i) => i.severity === 'error') ? 'error' : 'review';
-    if (t.kind === 'el' && !t.saved) t.saved = { title: el.getAttribute('title'), cls: el.getAttribute('class') };
-    el.classList.remove('ssc-error', 'ssc-review');
-    el.classList.add(t.kind === 'mark' ? 'ssc-hl' : 'ssc-el', 'ssc-' + sev);
-    const msgs = Array.from(new Set(t.issues.map((i) => i.message)));
-    el.setAttribute('title', msgs.join('\n'));
+  const HL_NAMES = { error: 'ssc-error', review: 'ssc-review' };
+
+  function anchorEl(issue) {
+    return issue.el || issue.node.parentElement;
   }
 
-  function highlight(issues) {
-    // text issues: wrap the matched characters in <mark>
-    const byNode = new Map();
-    const domIssues = [];
-    for (const is of issues) {
-      if (is.node) {
-        if (!byNode.has(is.node)) byNode.set(is.node, []);
-        byNode.get(is.node).push(is);
+  function targetOf(issue) {
+    return issue.range || issue.el;
+  }
+
+  function isLive(issue) {
+    return issue.node ? issue.node.isConnected && issue.node.nodeValue === issue.text : !!(issue.el && issue.el.isConnected);
+  }
+
+  function ensureHighlights() {
+    if (S.hl) return;
+    S.hl = { error: new Highlight(), review: new Highlight() };
+    S.hl.error.priority = 1;
+    for (const sev of Object.keys(HL_NAMES)) CSS.highlights.set(HL_NAMES[sev], S.hl[sev]);
+  }
+
+  function removeHighlights() {
+    if (!S.hl) return;
+    for (const name of Object.values(HL_NAMES)) CSS.highlights.delete(name);
+    S.hl = null;
+  }
+
+  function draw() {
+    ensureHighlights();
+    S.hl.error.clear();
+    S.hl.review.clear();
+    const byEl = new Map();
+    for (const is of S.issues) {
+      if (!S.filters[is.severity]) continue;
+      if (is.range) {
+        S.hl[is.severity].add(is.range);
       } else {
-        domIssues.push(is);
+        if (!byEl.has(is.el)) byEl.set(is.el, []);
+        byEl.get(is.el).push(is);
       }
     }
-
-    for (const [node, list] of byNode) {
-      const first = list[0];
-      if (!node.isConnected || node.nodeValue !== first.text) continue;
-      list.sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start));
-      const groups = [];
-      for (const is of list) {
-        const last = groups[groups.length - 1];
-        if (last && is.start < last.end) {
-          last.issues.push(is);
-          last.end = Math.max(last.end, is.end);
-        } else {
-          groups.push({ start: is.start, end: is.end, issues: [is] });
-        }
-      }
-      for (let i = groups.length - 1; i >= 0; i--) {
-        const g = groups[i];
-        const mid = node.splitText(g.start);
-        mid.splitText(g.end - g.start);
-        const mark = document.createElement('mark');
-        mark.className = 'ssc-hl';
-        mid.parentNode.insertBefore(mark, mid);
-        mark.appendChild(mid);
-        S.targets.set(mark, { kind: 'mark', issues: g.issues });
-        g.issues.forEach((is) => (is.el = mark));
-        paint(mark);
-      }
-    }
-
-    // element issues: outline the element
-    for (const is of domIssues) {
-      if (!is.el || !is.el.isConnected) continue;
-      let t = S.targets.get(is.el);
-      if (!t) {
-        t = { kind: 'el', issues: [], saved: null };
-        S.targets.set(is.el, t);
-      }
-      t.issues.push(is);
-      paint(is.el);
-    }
-
-    return issues.filter((is) => is.el);
+    S.boxes = Array.from(byEl, ([el, list]) => ({
+      el,
+      div: h('div', { class: 'box ' + (list.some((i) => i.severity === 'error') ? 'err' : 'rev') }),
+    }));
+    S.ui.boxes.replaceChildren(...S.boxes.map((b) => b.div));
+    layout();
   }
 
-  function releaseTarget(el, t, parents) {
-    if (t.kind === 'mark') {
-      const p = el.parentNode;
-      if (!p) return;
-      while (el.firstChild) p.insertBefore(el.firstChild, el);
-      p.removeChild(el);
-      parents.add(p);
-    } else {
-      el.classList.remove('ssc-el', 'ssc-error', 'ssc-review', 'ssc-active');
-      if (t.saved) {
-        if (t.saved.title === null) el.removeAttribute('title');
-        else el.setAttribute('title', t.saved.title);
-        if (t.saved.cls === null && !el.getAttribute('class')) el.removeAttribute('class');
+  function place(div, target, pad) {
+    const r = target.getBoundingClientRect();
+    div.hidden = !r.width && !r.height;
+    if (div.hidden) return;
+    div.style.left = r.left - pad + 'px';
+    div.style.top = r.top - pad + 'px';
+    div.style.width = r.width + pad * 2 + 'px';
+    div.style.height = r.height + pad * 2 + 'px';
+  }
+
+  function layout() {
+    for (const b of S.boxes) place(b.div, b.el, 0);
+    if (S.pulse) place(S.pulse.div, S.pulse.target, 4);
+  }
+
+  function showTip(e) {
+    const tip = S.ui.tip;
+    if (!tip) return;
+    const t = e.target;
+    const msgs = new Set();
+    if (t && t.nodeType === 1 && t !== S.host) {
+      const hit = (r) => e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      for (const is of S.issues) {
+        if (!S.filters[is.severity]) continue;
+        const over = is.range
+          ? is.node.parentElement === t && Array.from(is.range.getClientRects()).some(hit)
+          : is.el.contains(t) && hit(is.el.getBoundingClientRect());
+        if (over) msgs.add(is.message);
       }
     }
+    tip.hidden = !msgs.size;
+    if (tip.hidden) return;
+    tip.textContent = Array.from(msgs).join('\n');
+    const below = e.clientY + 18;
+    const top = below + tip.offsetHeight > innerHeight ? e.clientY - tip.offsetHeight - 10 : below;
+    tip.style.left = Math.max(8, Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8)) + 'px';
+    tip.style.top = Math.max(8, top) + 'px';
+  }
+
+  function startTracking() {
+    if (S.stopTracking) return;
+    let frame = 0;
+    const schedule = () => {
+      if (!frame) {
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          layout();
+        });
+      }
+    };
+    // Catches layout shifts such as an accordion opening above a boxed element.
+    const ro = new ResizeObserver(schedule);
+    ro.observe(document.documentElement);
+    window.addEventListener('scroll', schedule, { capture: true, passive: true });
+    window.addEventListener('resize', schedule, { passive: true });
+    document.addEventListener('mousemove', showTip, { capture: true, passive: true });
+    S.stopTracking = () => {
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+      window.removeEventListener('scroll', schedule, { capture: true });
+      window.removeEventListener('resize', schedule);
+      document.removeEventListener('mousemove', showTip, { capture: true });
+    };
+  }
+
+  function stopTracking() {
+    if (S.stopTracking) S.stopTracking();
+    S.stopTracking = null;
   }
 
   function clearHighlights() {
-    const parents = new Set();
-    for (const [el, t] of S.targets) releaseTarget(el, t, parents);
-    parents.forEach((p) => {
-      try {
-        p.normalize();
-      } catch (e) {
-        /* ignore */
-      }
-    });
-    S.targets.clear();
+    if (S.hl) {
+      S.hl.error.clear();
+      S.hl.review.clear();
+    }
+    S.boxes = [];
+    if (S.ui.boxes) S.ui.boxes.replaceChildren();
+    if (S.ui.tip) S.ui.tip.hidden = true;
+    if (S.pulse) S.pulse.div.remove();
+    S.pulse = null;
     S.issues = [];
     S.currentIssue = null;
-    S.activeEl = null;
   }
 
   function sortIssues(list) {
     return list.sort((a, b) => {
-      if (a.el === b.el) return a.id - b.id;
-      const pos = a.el.compareDocumentPosition(b.el);
-      return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+      const x = a.node || a.el;
+      const y = b.node || b.el;
+      if (x === y) return (a.start || 0) - (b.start || 0) || a.id - b.id;
+      return x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
     });
-  }
-
-  function applyFilterAttrs() {
-    const root = document.documentElement;
-    root.toggleAttribute('data-ssc-hide-error', !S.filters.error);
-    root.toggleAttribute('data-ssc-hide-review', !S.filters.review);
   }
 
   // ---------- panel ----------
@@ -377,6 +413,14 @@ ul{list-style:none;margin:0;padding:0}
 .settings[open]{display:flex;flex-direction:column}
 .settings::backdrop{background:rgba(0,0,0,.45)}
 .settings iframe{flex:1;width:100%;border:0;display:block}
+.layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:2147483646}
+.box{position:absolute;outline:4px solid #b42318;outline-offset:2px;border-radius:2px}
+.box.rev{outline:4px dashed #b54708}
+.pulse{position:absolute;border-radius:4px;animation:ssc-pulse .9s ease-in-out 3}
+@keyframes ssc-pulse{0%,100%{box-shadow:0 0 0 0 rgba(23,50,77,0)}50%{box-shadow:0 0 0 8px rgba(23,50,77,.55)}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none;box-shadow:0 0 0 6px rgba(23,50,77,.55)}}
+.tip{position:fixed;max-width:340px;padding:6px 9px;background:#1b1f24;color:#fff;border-radius:6px;font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.tip[hidden],.box[hidden],.pulse[hidden]{display:none}
 `;
 
   function buildPanel() {
@@ -402,10 +446,13 @@ ul{list-style:none;margin:0;padding:0}
     ui.scope = h('div', { class: 'scope' });
     ui.list = h('div', { class: 'body' });
     ui.status = h('div', { class: 'status', role: 'status', 'aria-live': 'polite' });
+    ui.boxes = h('div');
+    ui.tip = h('div', { class: 'tip', hidden: true });
+    ui.layer = h('div', { class: 'layer', 'aria-hidden': 'true' }, ui.boxes, ui.tip);
     ui.panel = h(
       'section',
       { class: 'panel', role: 'region', 'aria-label': 'Scottsdale style check results' },
-      h('div', { class: 'head' }, h('h2', null, 'Style check'), ui.minBtn, ui.closeBtn),
+      h('div', { class: 'head' }, h('h2', null, 'Scottsdale Style Guide'), ui.minBtn, ui.closeBtn),
       h('div', { class: 'chips' }, ui.errChip, ui.revChip),
       ui.notes,
       ui.scope,
@@ -421,7 +468,7 @@ ul{list-style:none;margin:0;padding:0}
         h('button', { class: 'btn', type: 'button', onclick: openSettings }, 'Settings')
       )
     );
-    shadow.appendChild(ui.panel);
+    shadow.append(ui.layer, ui.panel);
     document.documentElement.appendChild(host);
     S.host = host;
     S.shadow = shadow;
@@ -481,7 +528,7 @@ ul{list-style:none;margin:0;padding:0}
 
   function toggleFilter(sev) {
     S.filters[sev] = !S.filters[sev];
-    applyFilterAttrs();
+    draw();
     render();
   }
 
@@ -564,32 +611,37 @@ ul{list-style:none;margin:0;padding:0}
     }
   }
 
-  function pulse(el) {
-    if (S.activeEl) S.activeEl.classList.remove('ssc-active');
-    el.classList.add('ssc-active');
-    S.activeEl = el;
+  function pulse(issue) {
+    if (S.pulse) S.pulse.div.remove();
+    const p = { target: targetOf(issue), div: h('div', { class: 'pulse' }) };
+    S.pulse = p;
+    S.ui.layer.appendChild(p.div);
+    place(p.div, p.target, 4);
     clearTimeout(S.activeTimer);
-    S.activeTimer = setTimeout(() => el.classList.remove('ssc-active'), 2600);
+    S.activeTimer = setTimeout(() => {
+      p.div.remove();
+      if (S.pulse === p) S.pulse = null;
+    }, 2600);
   }
 
   function jump(issue) {
-    const el = issue.el;
-    if (!el || !el.isConnected) {
+    if (!isLive(issue)) {
       setStatus('That item is no longer on the page. Try Rescan.');
       return;
     }
+    const el = anchorEl(issue);
     S.currentIssue = issue;
-    for (let p = el.parentElement; p; p = p.parentElement) {
+    for (let p = el; p; p = p.parentElement) {
       if (p.tagName === 'DETAILS' && !p.open) p.open = true;
     }
-    const hidden = el.getClientRects().length === 0;
+    const hidden = targetOf(issue).getClientRects().length === 0;
     try {
       const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
     } catch (e) {
       /* ignore */
     }
-    pulse(el);
+    pulse(issue);
     const list = visibleIssues();
     setStatus(
       hidden
@@ -618,20 +670,9 @@ ul{list-style:none;margin:0;padding:0}
   }
 
   function dismiss(issue) {
-    const t = S.targets.get(issue.el);
     S.issues = S.issues.filter((i) => i !== issue);
     if (S.currentIssue === issue) S.currentIssue = null;
-    if (t) {
-      t.issues = t.issues.filter((i) => i !== issue);
-      if (t.issues.length) {
-        paint(issue.el);
-      } else {
-        const parents = new Set();
-        releaseTarget(issue.el, t, parents);
-        parents.forEach((p) => p.normalize());
-        S.targets.delete(issue.el);
-      }
-    }
+    draw();
     render();
     updateBadge();
     setStatus('Ignored until the next scan. To ignore it for good, add the text under "Ignored phrases" in settings.');
@@ -656,7 +697,7 @@ ul{list-style:none;margin:0;padding:0}
   }
 
   function sectionOf(issue, headings) {
-    const el = issue.el;
+    const el = anchorEl(issue);
     const own = el.closest('h1,h2,h3,h4,h5,h6');
     if (own || /^H[1-6]$/.test(el.tagName)) return 'In a heading';
     let last = null;
@@ -729,10 +770,10 @@ ul{list-style:none;margin:0;padding:0}
     S.settings = await loadSettings();
     if (token !== S.runToken || !S.on) return;
     const issues = scan();
-    const marked = highlight(issues);
-    S.issues = sortIssues(marked);
-    applyFilterAttrs();
     buildPanel();
+    S.issues = sortIssues(issues.filter(isLive));
+    draw();
+    startTracking();
     render();
     updateBadge();
     setStatus(S.issues.length ? 'Select an item to jump to it on the page.' : '');
@@ -747,13 +788,13 @@ ul{list-style:none;margin:0;padding:0}
     S.on = false;
     S.runToken++;
     clearTimeout(S.activeTimer);
+    stopTracking();
     clearHighlights();
+    removeHighlights();
     if (S.host) S.host.remove();
     S.host = null;
     S.shadow = null;
     S.ui = {};
-    document.documentElement.removeAttribute('data-ssc-hide-error');
-    document.documentElement.removeAttribute('data-ssc-hide-review');
     send({ type: 'badge', text: '', state: 'ok' });
     return Promise.resolve();
   }

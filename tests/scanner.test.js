@@ -41,6 +41,17 @@ async function load(opts = {}) {
     runtime: { sendMessage: (m) => sent.push(m) },
   };
   w.Element.prototype.scrollIntoView = function () {};
+  // jsdom has no Custom Highlight API, ResizeObserver or Range geometry.
+  w.Highlight = class extends Set {};
+  w.CSS = { highlights: new Map() };
+  w.ResizeObserver = class {
+    observe() {}
+    disconnect() {}
+  };
+  w.Range.prototype.getBoundingClientRect = () => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 });
+  w.Range.prototype.getClientRects = () => [];
+  w.requestAnimationFrame = (f) => setTimeout(f, 0);
+  w.cancelAnimationFrame = clearTimeout;
   w.eval(RULES_JS);
   w.eval(CONTENT_JS);
   await w.__ssc.ready;
@@ -48,38 +59,41 @@ async function load(opts = {}) {
 }
 
 const panel = (doc) => doc.getElementById('ssc-host').shadowRoot;
+const ranges = (w, sev) => (sev ? [...(w.CSS.highlights.get('ssc-' + sev) || [])] : [...ranges(w, 'error'), ...ranges(w, 'review')]);
+const marked = (w) => ranges(w).map((r) => r.toString());
+const inside = (w, sel) => ranges(w).filter((r) => r.startContainer.parentElement.closest(sel));
+const rowsFor = (w, id) =>
+  [...panel(w.document).querySelectorAll('.row')].filter((r) => r.querySelector('.rname').textContent === w.SSC.RULES_BY_ID[id].label);
+const untouched = (doc) => !doc.querySelector('mark, [class*="ssc-"], [title]') && ![...doc.documentElement.attributes].some((a) => a.name.startsWith('data-ssc'));
 
-test('highlights text and elements inside main only', async () => {
-  const { doc } = await load();
-  const marks = [...doc.querySelectorAll('mark.ssc-hl')];
-  assert.ok(marks.length >= 8, 'expected several marks, got ' + marks.length);
-  assert.strictEqual(doc.querySelectorAll('header mark, footer mark').length, 0);
-  assert.ok(!doc.querySelector('#outside').classList.contains('ssc-el'));
-  assert.ok(!doc.querySelector('footer p').classList.contains('ssc-el'), 'footer style attr is outside main');
-
-  const texts = marks.map((m) => m.textContent);
-  // the date, ordinal and time findings overlap, so they share one mark
-  assert.ok(texts.some((t) => t.includes('10th') && t.includes('9 AM')), 'merged date/time mark. Got: ' + JSON.stringify(texts));
+test('highlights text inside main only without changing the page', async () => {
+  const { w, doc } = await load();
+  const texts = marked(w);
+  assert.ok(texts.length >= 8, 'expected several highlights, got ' + texts.length);
+  assert.strictEqual(inside(w, 'header, footer').length, 0);
   for (const expected of ['East', 'Rd.', '(480) 312-2321', 'https://www.scottsdaleaz.gov/trash', 'City of Scottsdale', '5', 'ten']) {
-    assert.ok(texts.includes(expected), `missing mark for ${expected}. Got: ${JSON.stringify(texts)}`);
+    assert.ok(texts.includes(expected), `missing highlight for ${expected}. Got: ${JSON.stringify(texts)}`);
   }
-  assert.ok(!doc.querySelector('#clean mark'), 'the clean paragraph should have no marks');
+  assert.strictEqual(inside(w, '#clean').length, 0, 'the clean paragraph should have no highlights');
+  const before = new w.DOMParser().parseFromString(`<main>${MAIN_HTML}</main>`, 'text/html').querySelector('main').innerHTML;
+  assert.strictEqual(doc.querySelector('main').innerHTML, before, 'page markup is unchanged while active');
+  assert.ok(untouched(doc));
 });
 
 test('flags inline CSS, style tags, legacy markup and heading case', async () => {
-  const { doc } = await load();
-  assert.ok(doc.getElementById('p2').classList.contains('ssc-el'), 'style attribute');
-  assert.ok(doc.getElementById('d3').classList.contains('ssc-el'), 'element holding the <style> tag');
-  assert.ok(doc.querySelector('font').classList.contains('ssc-el'), 'legacy font tag');
-  assert.ok(doc.querySelector('h2').classList.contains('ssc-el'), 'title case heading');
-  assert.ok(doc.getElementById('p2').classList.contains('ssc-error'));
-  assert.ok(doc.querySelector('h2').classList.contains('ssc-review'));
+  const { w, doc } = await load();
+  for (const id of ['css-style-attr', 'css-style-tag', 'css-legacy-markup', 'head-sentence-case']) assert.ok(rowsFor(w, id).length, id);
+  assert.ok(rowsFor(w, 'css-style-attr')[0].classList.contains('err'));
+  assert.ok(rowsFor(w, 'head-sentence-case')[0].classList.contains('rev'));
+  assert.ok(panel(doc).querySelector('.layer .box.err'), 'element outlines are drawn in the shadow root');
+  assert.ok(panel(doc).querySelector('.layer .box.rev'));
+  assert.ok(untouched(doc));
 });
 
 test('inline CSS rules are off by default', async () => {
-  const { doc } = await load({ settings: null });
-  assert.ok(!doc.getElementById('p2').classList.contains('ssc-el'));
-  assert.ok(!doc.querySelector('font').classList.contains('ssc-el'));
+  const { w } = await load({ settings: null });
+  assert.strictEqual(rowsFor(w, 'css-style-attr').length, 0);
+  assert.strictEqual(rowsFor(w, 'css-legacy-markup').length, 0);
 });
 
 test('panel lists the issues and reports counts to the toolbar badge', async () => {
@@ -98,32 +112,32 @@ test('closing restores the page exactly', async () => {
   const before = new w.DOMParser().parseFromString(`<main>${MAIN_HTML}</main>`, 'text/html').querySelector('main').innerHTML;
   await w.__ssc.toggle();
   assert.strictEqual(doc.getElementById('ssc-host'), null);
-  assert.strictEqual(doc.querySelectorAll('mark.ssc-hl, .ssc-el').length, 0);
-  assert.strictEqual(doc.documentElement.hasAttribute('data-ssc-hide-error'), false);
+  assert.strictEqual(w.CSS.highlights.size, 0, 'highlights are unregistered');
   assert.strictEqual(doc.querySelector('main').innerHTML, before);
+  assert.ok(untouched(doc));
   assert.strictEqual(doc.querySelector('.keep').getAttribute('class'), 'keep me');
-  assert.strictEqual(doc.getElementById('p2').getAttribute('title'), null);
-  assert.strictEqual(doc.querySelector('font').hasAttribute('class'), false, 'empty class attribute should be removed');
 });
 
-test('toggling back on and rescanning never nests marks', async () => {
+test('toggling back on and rescanning never duplicates highlights', async () => {
   const { doc, w } = await load();
+  const count = ranges(w).length;
   await w.__ssc.toggle();
   await w.__ssc.toggle();
   await w.__ssc.rescan();
   await w.__ssc.rescan();
-  assert.strictEqual(doc.querySelectorAll('mark mark').length, 0);
+  assert.strictEqual(ranges(w).length, count);
   assert.strictEqual(doc.querySelectorAll('#ssc-host').length, 1);
 });
 
 test('Ignore removes one item and its highlight', async () => {
-  const { doc } = await load();
+  const { doc, w } = await load();
   const root = panel(doc);
   const before = root.querySelectorAll('.row').length;
-  const marksBefore = doc.querySelectorAll('mark.ssc-hl').length;
+  const rangesBefore = ranges(w).length;
+  const boxesBefore = root.querySelectorAll('.box').length;
   root.querySelector('.ign').click();
   assert.strictEqual(root.querySelectorAll('.row').length, before - 1);
-  assert.ok(doc.querySelectorAll('mark.ssc-hl').length <= marksBefore);
+  assert.strictEqual(ranges(w).length + root.querySelectorAll('.box').length, rangesBefore + boxesBefore - 1);
 });
 
 test('clicking a row marks it current and pulses the target', async () => {
@@ -131,16 +145,19 @@ test('clicking a row marks it current and pulses the target', async () => {
   const root = panel(doc);
   root.querySelector('.jump').click();
   assert.ok(root.querySelector('.row.current'));
-  assert.ok(doc.querySelector('.ssc-active'));
+  assert.ok(root.querySelector('.layer .pulse'));
+  assert.ok(untouched(doc));
 });
 
 test('filter chips hide review items from the list and page', async () => {
-  const { doc } = await load();
+  const { doc, w } = await load();
   const root = panel(doc);
   root.querySelector('.chip.rev').click();
-  assert.ok(doc.documentElement.hasAttribute('data-ssc-hide-review'));
+  assert.strictEqual(ranges(w, 'review').length, 0);
+  assert.strictEqual(root.querySelectorAll('.box.rev').length, 0);
   assert.strictEqual(root.querySelectorAll('.row.rev').length, 0);
   assert.ok(root.querySelectorAll('.row.err').length > 0);
+  assert.ok(ranges(w, 'error').length > 0);
 });
 
 test('rules set to off are skipped, and ignored phrases are honored', async () => {
@@ -148,29 +165,32 @@ test('rules set to off are skipped, and ignored phrases are honored', async () =
   settings.rules['css-style-attr'] = 'off';
   settings.rules['date-ordinal'] = 'off';
   settings.ignoredPhrases = ['City of Scottsdale'];
-  const { doc } = await load({ settings });
-  assert.ok(!doc.getElementById('p2').classList.contains('ssc-el'));
-  const texts = [...doc.querySelectorAll('mark.ssc-hl')].map((m) => m.textContent);
+  const { w } = await load({ settings });
+  assert.strictEqual(rowsFor(w, 'css-style-attr').length, 0);
+  const texts = marked(w);
   assert.ok(!texts.includes('10th'));
   assert.ok(!texts.includes('City of Scottsdale'));
 });
 
-test('overlapping matches share one mark and list every issue', async () => {
-  const { doc } = await load({ main: '<p>Join us Aug. 10th at 9 AM today.</p>' });
-  const marks = doc.querySelectorAll('mark.ssc-hl');
-  assert.strictEqual(marks.length, 1);
-  assert.strictEqual(marks[0].textContent, 'Aug. 10th at 9 AM');
-  const rows = panel(doc).querySelectorAll('.row');
-  assert.ok(rows.length >= 3, 'rows: ' + rows.length);
-  assert.ok(marks[0].getAttribute('title').split('\n').length >= 3, 'tooltip lists every message');
+test('overlapping matches each get a highlight, a row and one tooltip', async () => {
+  const { doc, w } = await load({ main: '<p>Join us Aug. 10th at 9 AM today.</p>' });
+  assert.ok(ranges(w).length >= 3, 'ranges: ' + ranges(w).length);
+  assert.ok(panel(doc).querySelectorAll('.row').length >= 3);
+  w.Range.prototype.getClientRects = () => [{ left: 0, top: 0, right: 100, bottom: 100 }];
+  doc.querySelector('main p').dispatchEvent(new w.MouseEvent('mousemove', { bubbles: true, clientX: 10, clientY: 10 }));
+  const tip = panel(doc).querySelector('.tip');
+  assert.ok(!tip.hidden);
+  assert.ok(tip.textContent.split('\n').length >= 3, 'tooltip lists every message');
+  doc.body.dispatchEvent(new w.MouseEvent('mousemove', { bubbles: true, clientX: 10, clientY: 10 }));
+  assert.ok(tip.hidden, 'tooltip hides off the highlight');
 });
 
 test('default skip selectors leave template parts alone', async () => {
-  const { doc } = await load({
+  const { w } = await load({
     main: '<div class="last-updated"><p>Last Updated: Oct 12, 2026</p></div><div class="ev-grid"><p>City of Scottsdale</p></div><p id="body">Oct 12, 2026</p>',
   });
-  assert.strictEqual(doc.querySelectorAll('.last-updated mark, .ev-grid mark').length, 0);
-  assert.ok(doc.querySelector('#body mark'));
+  assert.strictEqual(inside(w, '.last-updated, .ev-grid').length, 0);
+  assert.ok(inside(w, '#body').length);
 });
 
 test('an ignored phrase matches a long heading in full', async () => {
@@ -178,16 +198,16 @@ test('an ignored phrase matches a long heading in full', async () => {
   const heading = 'FY 2025/26 Consolidated Annual Performance and Evaluation Report (CAPER)';
   settings.ignoredPhrases = [heading];
   settings.allowTitleCaseTopHeadings = false;
-  const { doc } = await load({ settings, main: `<h2>${heading}</h2>` });
-  assert.ok(!doc.querySelector('h2').classList.contains('ssc-el'));
+  const { w } = await load({ settings, main: `<h2>${heading}</h2>` });
+  assert.strictEqual(rowsFor(w, 'head-sentence-case').length, 0);
 });
 
 test('a missing or invalid scope falls back to the whole page with a note', async () => {
   const settings = require('../extension/rules.js').defaultSettings();
   settings.scopeSelector = '#nope';
-  const { doc } = await load({ settings });
+  const { doc, w } = await load({ settings });
   assert.match(panel(doc).querySelector('.note').textContent, /whole page/);
-  assert.ok(doc.querySelector('#outside mark'), 'header text should now be checked');
+  assert.ok(inside(w, '#outside').length, 'header text should now be checked');
 
   settings.scopeSelector = '###bad[';
   const second = await load({ settings });

@@ -1,59 +1,12 @@
-/* Highlights drawn on the page being checked. Error is a solid red line, review is a dotted amber line. */
+/* Text highlights use the CSS Custom Highlight API, so no markup is added to the page.
+   Error is a solid red underline, review is a dotted amber underline. */
 
-mark.ssc-hl {
-  background: rgba(220, 38, 38, 0.18) !important;
-  color: inherit !important;
-  font: inherit !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border: 0 !important;
-  border-bottom: 3px solid #b42318 !important;
-  border-radius: 2px !important;
-  cursor: help !important;
+::highlight(ssc-error) {
+  background-color: rgba(220, 38, 38, 0.18);
+  text-decoration: underline solid #b42318 3px;
 }
 
-mark.ssc-hl.ssc-review {
-  background: rgba(245, 158, 11, 0.28) !important;
-  border-bottom: 3px dotted #b54708 !important;
-}
-
-.ssc-el {
-  outline: 4px solid #b42318 !important;
-  outline-offset: 2px !important;
-}
-
-.ssc-el.ssc-review {
-  outline: 4px dashed #b54708 !important;
-}
-
-.ssc-active {
-  animation: ssc-pulse 0.9s ease-in-out 3 !important;
-}
-
-@keyframes ssc-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(23, 50, 77, 0); }
-  50% { box-shadow: 0 0 0 8px rgba(23, 50, 77, 0.55); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ssc-active {
-    animation: none !important;
-    box-shadow: 0 0 0 6px rgba(23, 50, 77, 0.55) !important;
-  }
-}
-
-/* Filters from the results panel */
-html[data-ssc-hide-error] mark.ssc-hl.ssc-error {
-  background: none !important;
-  border-bottom: 0 !important;
-}
-html[data-ssc-hide-review] mark.ssc-hl.ssc-review {
-  background: none !important;
-  border-bottom: 0 !important;
-}
-html[data-ssc-hide-error] .ssc-el.ssc-error {
-  outline: none !important;
-}
-html[data-ssc-hide-review] .ssc-el.ssc-review {
-  outline: none !important;
+::highlight(ssc-review) {
+  background-color: rgba(245, 158, 11, 0.28);
+  text-decoration: underline dotted #b54708 3px;
 }
